@@ -13,7 +13,7 @@ impl TableBuilder {
         let mut meta = FileMetaDataBuilder::new();
         meta.file_num(num);
 
-        let fname = FileType::TABLE(dbname, num).filename();
+        let fname = FileType::Table(dbname, num).filename();
         let fd = fs::OpenOptions::new() // add read permission?
             .write(true)
             .create(true)

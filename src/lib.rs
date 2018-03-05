@@ -50,7 +50,7 @@ impl LogDB {
         }
 
         let mut v = VersionSet::new(dir);
-        let fname = FileType::LOG(dir, v.next_file_num()).filename();
+        let fname = FileType::Log(dir, v.next_file_num()).filename();
         let fd = fs::OpenOptions::new() // add read permission?
             .write(true)
             .create(true)
@@ -80,7 +80,7 @@ impl LogDB {
     }
 
     fn recover(&mut self, edit: &mut VersionEdit) {
-        let current = FileType::CURRENT(&self.dbname).filename();
+        let current = FileType::Current(&self.dbname).filename();
         if !Path::new(&current).exists() {
             // TODO create current file when create db
             println!("CURRENT file does not exist");
