@@ -37,8 +37,20 @@ pub struct LogDB {
 }
 
 pub fn open(dir: &str) -> LogDB {
+    let manifest_file_num: usize = 1;
     let mut db = LogDB::new(dir);
-    let mut edit = VersionEdit::new();
+    let mut edit = VersionEdit::new((manifest_file_num + 1) as u64);
+
+    {
+        let manifest = FileType::Manifest(dir, manifest_file_num).filename();
+        let mut writer = fs::File::create(manifest)
+            .map(|fs| LogWriter::new(BufWriter::new(fs)))
+            .expect("Failed to create writer for manifest file");
+        edit.encode_to(&mut writer)
+    }
+
+    filename::set_current_file(dir, manifest_file_num);
+
     db.recover(&mut edit);
     db
 }

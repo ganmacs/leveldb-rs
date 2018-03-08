@@ -1,4 +1,7 @@
 use ikey::InternalKey2;
+use bytes::{BufMut, BytesMut, LittleEndian};
+use log::LogWriter;
+use std::io::Write;
 
 pub struct FileMetaDataBuilder {
     file_num: Option<u64>,
@@ -71,25 +74,82 @@ pub struct FileMetaData {
     smallest: InternalKey2,
 }
 
-// impl FileMetaData {
-//     pub fn new(num: u64) -> Self {
-//         FileMetaData {
-//             file_num: num,
-//             size: 0,
-//         }
-//     }
-// }
+impl FileMetaData {
+    // pub fn new(num: u64) -> Self {
+    //     FileMetaData {
+    //         file_num: num,
+    //         size: 0,
+    //     }
+    // }
+
+    // pub fn file_name()
+}
+
+enum Tag {
+    Comparator = 1,
+    LogNumber = 2,
+    NextFileNumber = 3,
+    LastSequence = 4,
+    CompactPointer = 5,
+    DeletedFile = 6,
+    NewFile = 7,
+    PrevLogNumber = 9,
+}
 
 pub struct VersionEdit {
-    inner: Vec<(FileMetaData, usize)>,
+    files: Vec<(FileMetaData, usize)>,
+    next_file_number: u64,
+    last_sequence: u64,
+    log_number: u64,
+    prev_log_number: u64,
 }
 
 impl VersionEdit {
-    pub fn new() -> Self {
-        VersionEdit { inner: vec![] }
+    pub fn new(nex_file_num: u64) -> Self {
+        VersionEdit {
+            files: vec![],
+            next_file_number: nex_file_num,
+            log_number: 0,
+            last_sequence: 0,
+            prev_log_number: 0,
+        }
+    }
+
+    pub fn encode_to<T: Write>(&self, writer: &mut LogWriter<T>) {
+        let mut res = BytesMut::new();
+
+        if self.log_number != 0 {
+            res.put_u8(Tag::LogNumber as u8);
+            res.put_u64::<LittleEndian>(self.log_number as u64);
+        }
+
+        if self.prev_log_number != 0 {
+            res.put_u8(Tag::PrevLogNumber as u8);
+            res.put_u64::<LittleEndian>(self.prev_log_number as u64);
+        }
+
+        if self.next_file_number != 0 {
+            res.put_u8(Tag::NextFileNumber as u8);
+            res.put_u64::<LittleEndian>(self.next_file_number as u64);
+        }
+
+        if self.last_sequence != 0 {
+            res.put_u8(Tag::LastSequence as u8);
+            res.put_u64::<LittleEndian>(self.last_sequence as u64);
+        }
+
+        for &(ref meta, ref level) in self.files.iter() {
+            res.put_u8(Tag::NewFile as u8);
+            res.put_u64::<LittleEndian>(*level as u64);
+            res.put_u64::<LittleEndian>(meta.file_num);
+            res.put_slice(&meta.largest);
+            res.put_slice(&meta.smallest);
+        }
+
+        writer.add_record(res.freeze());
     }
 
     pub fn add_file(&mut self, meta: FileMetaData, level: usize) {
-        self.inner.push((meta, level));
+        self.files.push((meta, level));
     }
 }
