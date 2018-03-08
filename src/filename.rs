@@ -25,7 +25,7 @@ lazy_static!{
     };
 
     static ref MANIFEST_FILE_REGEX: Regex = {
-        Regex::new(r"([\w]+)/MANIFEST-[\d]{7}").unwrap()
+        Regex::new(r"([\w]+)/MANIFEST-([\d]{7})").unwrap()
     };
 
     static ref CURRENT_TMP_REGEX: Regex = {
@@ -39,7 +39,7 @@ pub fn set_current_file(dbname: &str, num: usize) {
 
     fs::File::create(&tmp_name)
         .and_then(|mut file| {
-            let content = format!("MANIFEST-{:06}", num);
+            let content = format!("MANIFEST-{:07}\n", num);
             file.write_all(content.as_bytes())
         })
         .and_then(|_| fs::rename(&tmp_name, &current_name))
@@ -60,9 +60,17 @@ impl<'a> FileType<'a> {
             let num = v.get(1).unwrap().as_str(); // XXX
             FileType::Table(v.get(0).unwrap().as_str(), 000)
         } else if MANIFEST_FILE_REGEX.is_match(filename) {
-            let v = MANIFEST_FILE_REGEX.captures(filename).unwrap();
-            let num = v.get(1).unwrap().as_str().parse().unwrap();
-            FileType::Manifest(v.get(0).unwrap().as_str(), num)
+            if let Some(v) = MANIFEST_FILE_REGEX.captures(filename) {
+                let name = v.get(1).map(|v| v.as_str()).expect(
+                    "manifest file regex name",
+                );
+                let num = v.get(2).and_then(|v| v.as_str().parse().ok()).expect(
+                    "manifest file regex num",
+                );
+                FileType::Manifest(name, num)
+            } else {
+                panic!("manifest file name is invalid")
+            }
         } else {
             unimplemented!()
         }

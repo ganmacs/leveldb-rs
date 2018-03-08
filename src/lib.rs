@@ -37,20 +37,8 @@ pub struct LogDB {
 }
 
 pub fn open(dir: &str) -> LogDB {
-    let manifest_file_num: usize = 1;
     let mut db = LogDB::new(dir);
-    let mut edit = VersionEdit::new((manifest_file_num + 1) as u64);
-
-    {
-        let manifest = FileType::Manifest(dir, manifest_file_num).filename();
-        let mut writer = fs::File::create(manifest)
-            .map(|fs| LogWriter::new(BufWriter::new(fs)))
-            .expect("Failed to create writer for manifest file");
-        edit.encode_to(&mut writer)
-    }
-
-    filename::set_current_file(dir, manifest_file_num);
-
+    let mut edit = VersionEdit::new(0); // XXX
     db.recover(&mut edit);
     db
 }
@@ -92,13 +80,9 @@ impl LogDB {
     }
 
     fn recover(&mut self, edit: &mut VersionEdit) {
-        let current = FileType::Current(&self.dbname).filename();
-        if !Path::new(&current).exists() {
-            // TODO create current file when create db
-            println!("CURRENT file does not exist");
-        }
+        self.setup_metafile();
 
-        let paths = fs::read_dir(&self.dbname).unwrap();
+        let paths = fs::read_dir(&self.dbname).expect("Failed to read log files");
         for p in paths {
             let path = &p.unwrap().path();
             let ft = FileType::parse_name(path.to_str().unwrap());
@@ -140,6 +124,22 @@ impl LogDB {
 
         for (key_kind, ukey, value) in batch.into_iter() {
             self.mem.add(key_kind, &ukey, &value);
+        }
+    }
+
+    fn setup_metafile(&self) {
+        let manifest_file_num: usize = 1;
+        let current = FileType::Current(&self.dbname).filename();
+
+        if !Path::new(&current).exists() {
+            let edit = VersionEdit::new((manifest_file_num + 1) as u64);
+            let manifest = FileType::Manifest(&self.dbname, manifest_file_num).filename();
+            let mut writer = fs::File::create(manifest)
+                .map(|fs| LogWriter::new(BufWriter::new(fs)))
+                .expect("Failed to create writer for manifest file");
+            edit.encode_to(&mut writer);
+
+            filename::set_current_file(&self.dbname, manifest_file_num);
         }
     }
 }
