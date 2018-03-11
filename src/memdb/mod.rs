@@ -19,6 +19,10 @@ impl MemDB {
         MemDB { inner: skiplist::SkipList::new() }
     }
 
+    pub fn empty(&self) -> bool {
+        self.inner.empty()
+    }
+
     // Should be LookupKey
     pub fn get(&self, key: &InternalKey) -> Option<Bytes> {
         // let v = key.memtable_key();

@@ -23,6 +23,10 @@ impl SkipList {
         }
     }
 
+    pub fn empty(&self) -> bool {
+        self.data.len() == 0
+    }
+
     pub fn get(&self, key: &Key) -> Option<Bytes> {
         let (n, exact) = self.find_greater_than_eq(key, &mut None);
         if exact {
