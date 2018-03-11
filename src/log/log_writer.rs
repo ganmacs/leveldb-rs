@@ -50,8 +50,7 @@ impl<T: Write> LogWriter<T> {
             //     end,
             //     left,
             // );
-
-            let data = data.slice(self.offset, self.offset + fragment_size);
+            let data = data.slice_to(fragment_size);
             self.emit_record(&data, fragment_size, kind);
             left -= fragment_size;
             begin = false;
