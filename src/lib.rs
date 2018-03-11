@@ -93,22 +93,23 @@ impl LogDB {
     }
 
     fn replay_logfile(&mut self, path: &std::path::PathBuf, edit: &mut VersionEdit) {
-        let reader = BufReader::new(fs::File::open(path).unwrap());
-        let mut lr = LogReader::new(reader);
-        let record = lr.read_record().unwrap();
-        if record.len() == 0 {
-            println!("skip");
-            return;
-        }
+        let reader = fs::File::open(path)
+            .map(|fs| LogReader::new(BufReader::new(fs)))
+            .expect("failed to read log file");
+
+        let v = reader.into_iter().flat_map(
+            |r| WriteBatch::load_data(r).into_iter(),
+        );
 
         let mut mem = MemDB::new();
-        let write_batch = WriteBatch::load_data(record);
-        for (key_kind, ukey, value) in write_batch.into_iter() {
+        for (key_kind, ukey, value) in v {
             mem.add(key_kind, &ukey, &value);
             // TODO: memory usage is larger than buffer size
         }
 
-        self.write_level0_table(edit, &mut mem.into_iter())
+        if !mem.empty() {
+            self.write_level0_table(edit, &mut mem.into_iter())
+        }
     }
 
     fn write_level0_table(&mut self, edit: &mut VersionEdit, mem: &mut MemDBIterator) {
