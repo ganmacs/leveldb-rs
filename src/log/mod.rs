@@ -27,7 +27,7 @@ enum RecordType {
     EOF,
 }
 
-impl RecordType {
+impl From<u8> for RecordType {
     fn from(v: u8) -> Self {
         match v {
             0 => RecordType::FULL,
