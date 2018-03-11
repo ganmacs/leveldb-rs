@@ -96,6 +96,22 @@ enum Tag {
     PrevLogNumber = 9,
 }
 
+impl From<u8> for Tag {
+    fn from(v: u8) -> Self {
+        match v {
+            1 => Tag::CompactPointer,
+            2 => Tag::LogNumber,
+            3 => Tag::NextFileNumber,
+            4 => Tag::LastSequence,
+            5 => Tag::Comparator,
+            6 => Tag::DeletedFile,
+            7 => Tag::NewFile,
+            8 => Tag::PrevLogNumber,
+            _ => panic!(format!("convert failed {:?}", v)),
+        }
+    }
+}
+
 pub struct VersionEdit {
     files: Vec<(FileMetaData, usize)>,
     next_file_number: u64,
