@@ -1,6 +1,7 @@
 use std::io::Read;
 use bytes::{Bytes, LittleEndian, ByteOrder, BytesMut};
 use super::{RecordType, BLOCK_SIZE, HEADER_SIZE, LENGTH_SIZE, TYPE_SIZE, CHECKSUM_SIZE, crc32};
+use std::iter::Iterator;
 
 pub struct LogReader<T: Read> {
     inner: T,
@@ -11,26 +12,26 @@ impl<T: Read> LogReader<T> {
         LogReader { inner: reader }
     }
 
-    pub fn read_record(&mut self) -> Result<Bytes, &str> {
+    pub fn read_record(&mut self) -> Option<Bytes> {
         let mut slice = Bytes::with_capacity(BLOCK_SIZE);
-        let record_type = self.read_physical_record(&mut slice);
+        let record_type = self.read_physical_record(&mut slice).expect(
+            "invalid record type",
+        );
 
         // TODO fragment
-        match record_type {
-            Ok(RecordType::FULL) => (),
-            Ok(RecordType::FIRST) => {
-                slice.extend(self.read_record().unwrap());
+        let record = match record_type {
+            RecordType::FULL => None,
+            RecordType::FIRST => self.read_record(),
+            RecordType::MIDDLE => self.read_record(),
+            RecordType::LAST => None,
+            RecordType::EOF => return None,
+        };
 
-            }
-            Ok(RecordType::MIDDLE) => {
-                slice.extend(self.read_record().unwrap());
-            }
-            Ok(RecordType::LAST) => (),
-            Ok(RecordType::EOF) => (),
-            Err(e) => panic!(e),
+        if let Some(r) = record {
+            slice.extend(r);
         }
 
-        Ok(slice)
+        Some(slice)
     }
 
     fn read_physical_record(&mut self, ret: &mut Bytes) -> Result<RecordType, &'static str> {
@@ -67,8 +68,17 @@ impl<T: Read> LogReader<T> {
             println!("invalid");
             return Err("validation failed");
         }
+
         ret.extend(record);
         Ok(rtype)
+    }
+}
+
+impl<T: Read> Iterator for LogReader<T> {
+    type Item = Bytes;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.read_record()
     }
 }
 
