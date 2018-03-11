@@ -13,7 +13,7 @@ mod filename;
 mod version;
 mod table;
 
-use batch::WriteBatch;
+pub use batch::WriteBatch;
 use bytes::Bytes;
 use log::{LogReader, LogWriter};
 use memdb::MemDB;
@@ -28,7 +28,7 @@ use version::{VersionSet, VersionEdit};
 use table::TableBuilder;
 use memdb::MemDBIterator;
 
-pub struct LogDB {
+pub struct LevelDB {
     log: LogWriter<BufWriter<File>>,
     dbname: String,
     versions: VersionSet,
@@ -36,14 +36,14 @@ pub struct LogDB {
     imm: Option<MemDB>,
 }
 
-pub fn open(dir: &str) -> LogDB {
-    let mut db = LogDB::new(dir);
+pub fn open(dir: &str) -> LevelDB {
+    let mut db = LevelDB::new(dir);
     let mut edit = VersionEdit::new(0); // XXX
     db.recover(&mut edit);
     db
 }
 
-impl LogDB {
+impl LevelDB {
     fn new(dir: &str) -> Self {
         if !Path::new(&dir).exists() {
             fs::create_dir(&dir).unwrap()
@@ -57,7 +57,7 @@ impl LogDB {
             .open(fname)
             .unwrap();
         let writer = BufWriter::new(fd);
-        LogDB {
+        Self {
             dbname: dir.to_owned(),
             log: LogWriter::new(writer),
             versions: v,
@@ -126,7 +126,7 @@ impl LogDB {
         Ok(())
     }
 
-    fn apply(&mut self, batch: WriteBatch) {
+    pub fn apply(&mut self, batch: WriteBatch) {
         self.log.add_record(batch.data());
 
         for (key_kind, ukey, value) in batch.into_iter() {
