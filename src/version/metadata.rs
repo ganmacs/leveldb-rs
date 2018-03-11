@@ -63,6 +63,7 @@ impl FileMetaDataBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct FileMetaData {
     file_num: u64,
     size: u64,

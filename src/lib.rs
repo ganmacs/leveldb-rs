@@ -81,6 +81,7 @@ impl LogDB {
 
     fn recover(&mut self, edit: &mut VersionEdit) {
         self.setup_metafile();
+        self.versions.recover();
 
         let paths = fs::read_dir(&self.dbname).expect("Failed to read log files");
         for p in paths {
