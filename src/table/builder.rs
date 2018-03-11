@@ -9,7 +9,11 @@ pub struct TableBuilder {}
 
 
 impl TableBuilder {
-    pub fn build(dbname: &str, iterator: &mut MemDBIterator, num: u64) -> FileMetaData {
+    pub fn build(
+        dbname: &str,
+        iterator: &mut MemDBIterator,
+        num: u64,
+    ) -> Result<FileMetaData, &'static str> {
         let mut meta = FileMetaDataBuilder::new();
         meta.file_num(num);
 

@@ -108,16 +108,21 @@ impl LogDB {
         }
 
         if !mem.empty() {
-            self.write_level0_table(edit, &mut mem.into_iter())
+            self.write_level0_table(edit, &mut mem.into_iter()).expect(
+                "failed to write write level 0 table",
+            )
         }
     }
 
-    fn write_level0_table(&mut self, edit: &mut VersionEdit, mem: &mut MemDBIterator) {
+    fn write_level0_table(
+        &mut self,
+        edit: &mut VersionEdit,
+        mem: &mut MemDBIterator,
+    ) -> Result<(), &'static str> {
         let num = self.versions.next_file_num();
-        let meta = TableBuilder::build(&self.dbname, mem, num);
-
-        // XXX
+        let meta = TableBuilder::build(&self.dbname, mem, num)?;
         edit.add_file(meta, 0);
+        Ok(())
     }
 
     fn apply(&mut self, batch: WriteBatch) {
