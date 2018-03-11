@@ -29,7 +29,7 @@ lazy_static!{
     };
 
     static ref CURRENT_TMP_REGEX: Regex = {
-        Regex::new(r"([\w]+)/CURRENT.[\d]{7}").unwrap()
+        Regex::new(r"([\w]+)/CURRENT.([\d]{7})").unwrap()
     };
 }
 
@@ -39,7 +39,7 @@ pub fn set_current_file(dbname: &str, num: usize) {
 
     fs::File::create(&tmp_name)
         .and_then(|mut file| {
-            let content = format!("MANIFEST-{:07}\n", num);
+            let content = format!("MANIFEST-{:07}", num);
             file.write_all(content.as_bytes())
         })
         .and_then(|_| fs::rename(&tmp_name, &current_name))
