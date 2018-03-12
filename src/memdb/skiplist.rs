@@ -5,7 +5,7 @@ use super::MAX_HEIGHT;
 
 type Key = Bytes;
 type Value = Bytes;
-type IdxFragment = [u8; 14];
+type IdxFragment = [u16; 14];
 
 #[derive(Debug)]
 pub struct SkipList {
@@ -43,7 +43,7 @@ impl SkipList {
 
         if exact {
             let voffset = self.save(value.as_ref());
-            self.idx.update_val(n, voffset as u8);
+            self.idx.update_val(n, voffset as u16);
             return;
         }
 
@@ -51,17 +51,18 @@ impl SkipList {
 
         let n1 = self.idx.len();
         let koffset = self.save(key.as_ref());
-        ibuilder.key(koffset as u8);
+        ibuilder.key(koffset as u16);
         let voffset = self.save(value.as_ref());
-        ibuilder.value(voffset as u8);
+        ibuilder.value(voffset as u16);
 
-        let height = rand::thread_rng().gen_range(1, MAX_HEIGHT);
+        // let height = rand::thread_rng().gen_range(1, MAX_HEIGHT);
+        let height = 12;
 
         for level in 0..height {
             let p = prev[level];
             let next_i = self.idx.next(p + level);
-            ibuilder.next(level, next_i as u8);
-            self.idx.update_next(p + level, n1 as u8);
+            ibuilder.next(level, next_i as u16);
+            self.idx.update_next(p + level, n1 as u16);
         }
 
         self.idx.extend_from_slice(&ibuilder.build());
@@ -143,20 +144,20 @@ struct IndexBuilder {
 
 impl IndexBuilder {
     pub fn new() -> Self {
-        IndexBuilder { inner: [HEAD as u8; 14] }
+        IndexBuilder { inner: [HEAD as u16; 14] }
     }
 
-    pub fn key(&mut self, v: u8) -> &Self {
+    pub fn key(&mut self, v: u16) -> &Self {
         self.inner[KEY] = v;
         self
     }
 
-    pub fn value(&mut self, v: u8) -> &Self {
+    pub fn value(&mut self, v: u16) -> &Self {
         self.inner[VAL] = v;
         self
     }
 
-    pub fn next(&mut self, i: usize, v: u8) -> &Self {
+    pub fn next(&mut self, i: usize, v: u16) -> &Self {
         self.inner[i + NEXT] = v;
         self
     }
@@ -168,7 +169,7 @@ impl IndexBuilder {
 
 #[derive(Debug)]
 struct SkipIndex {
-    inner: Vec<u8>,
+    inner: Vec<u16>,
 }
 
 impl SkipIndex {
@@ -198,15 +199,15 @@ impl SkipIndex {
         self.inner[i + NEXT] as usize
     }
 
-    pub fn update_key(&mut self, i: usize, v: u8) {
+    pub fn update_key(&mut self, i: usize, v: u16) {
         self.inner[i + KEY] = v
     }
 
-    pub fn update_val(&mut self, i: usize, v: u8) {
+    pub fn update_val(&mut self, i: usize, v: u16) {
         self.inner[i + VAL] = v
     }
 
-    pub fn update_next(&mut self, i: usize, v: u8) {
+    pub fn update_next(&mut self, i: usize, v: u16) {
         self.inner[i + NEXT] = v
     }
 }
@@ -285,6 +286,23 @@ mod tests {
         }
 
         assert_eq!(list.get(&Bytes::from("notfound")), None);
+    }
+
+    #[test]
+    fn test_skiplist_bulk_insert() {
+        let mut list = SkipList::new();
+        let size = 1000;
+        for i in 0..size {
+            list.insert(
+                &Bytes::from(format!("key{}", i)),
+                &Bytes::from(format!("value{}", i)),
+            )
+        }
+
+        for i in 0..size {
+            assert!(list.get(&Bytes::from(format!("key{}", i))).is_some());
+        }
+
     }
 
     #[test]
