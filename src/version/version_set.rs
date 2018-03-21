@@ -4,7 +4,7 @@ use std::fs;
 use std::io::Read;
 use std::io::BufReader;
 use log::LogReader;
-use super::{VersionEdit, FileMetaData};
+use super::{VersionEdit, FileMetaData, CircularLinkedList};
 
 pub struct VersionSet {
     dbname: String,
@@ -13,6 +13,10 @@ pub struct VersionSet {
     pub next_file_number: u64,
     pub prev_log_number: u64,
     pub last_sequence: u64,
+
+    // dummy_version is the head of a doubly-linked list of versions.
+    // dummy_Version.prev is the current version.
+    dummy_version: CircularLinkedList<Version>,
 }
 
 impl VersionSet {
@@ -24,6 +28,7 @@ impl VersionSet {
             next_file_number: 0,
             prev_log_number: 0,
             last_sequence: 0,
+            dummy_version: CircularLinkedList::new(Version::new()),
         }
     }
 
