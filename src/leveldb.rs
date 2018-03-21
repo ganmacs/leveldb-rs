@@ -8,7 +8,7 @@ use filename;
 use ikey::InternalKey;
 use memdb::{MemDBIterator, MemDB};
 use batch::WriteBatch;
-use log::{LogReader, LogWriter};
+use log_record::{LogReader, LogWriter};
 use version::{VersionSet, VersionEdit};
 use table::TableBuilder;
 

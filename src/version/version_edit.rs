@@ -1,5 +1,5 @@
 use bytes::{Bytes, BufMut, BytesMut, LittleEndian, ByteOrder};
-use log::LogWriter;
+use log_record::LogWriter;
 use std::io::Write;
 use self::super::FileMetaData;
 

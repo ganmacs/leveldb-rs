@@ -3,7 +3,7 @@ use filename::FileType;
 use std::fs;
 use std::io::Read;
 use std::io::BufReader;
-use log::LogReader;
+use log_record::LogReader;
 use super::{VersionEdit, FileMetaData, CircularLinkedList};
 
 pub struct VersionSet {
