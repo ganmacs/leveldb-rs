@@ -8,7 +8,7 @@ use super::{VersionEdit, FileMetaData, CircularLinkedList};
 
 pub struct VersionSet {
     dbname: String,
-    file_number: u64,
+    manifest_file_number: u64,
     pub log_number: u64,
     pub next_file_number: u64,
     pub prev_log_number: u64,
@@ -23,18 +23,23 @@ impl VersionSet {
     pub fn new(dbname: &str) -> Self {
         Self {
             dbname: dbname.to_owned(),
-            file_number: 1,
+            manifest_file_number: 0, // will be filled in recover
             log_number: 0,
-            next_file_number: 0,
+            next_file_number: 2, // 1 is reserved by Manifest file?
             prev_log_number: 0,
             last_sequence: 0,
             dummy_version: CircularLinkedList::new(Version::new()),
         }
     }
 
+    pub fn current(&self) -> Option<&Version> {
+        self.dummy_version.current()
+    }
+
     pub fn next_file_num(&mut self) -> u64 {
-        self.file_number += 1;
-        self.file_number
+        let r = self.next_file_number;
+        self.next_file_number += 1;
+        r
     }
 
     pub fn recover(&mut self) {
@@ -78,26 +83,27 @@ impl VersionSet {
                 last_sequence = ve.last_sequence
             }
         }
-
+        self.next_file_number = next_file_number;
         self.mark_file_num_used(log_number);
         self.mark_file_num_used(prev_log_number);
+        self.manifest_file_number = self.next_file_num();
 
-        self.next_file_number = next_file_number;
-        self.prev_log_number = prev_log_number;
         self.last_sequence = last_sequence;
+        self.log_number = log_number;
+        self.prev_log_number = prev_log_number;
 
-        let v = vb.save_to();
+        let mut ver = Version::new();
+        let v = vb.save_to(&mut ver);
         self.append(v);
     }
 
     fn append(&mut self, v: Version) {
-        // let v = self.prev.next;
-        // self.prev.next = v
+        self.dummy_version.append(v)
     }
 
     fn mark_file_num_used(&mut self, num: u64) {
-        if self.file_number <= num {
-            self.file_number = num + 1
+        if self.next_file_number <= num {
+            self.next_file_number = num + 1
         }
     }
 }
@@ -106,8 +112,7 @@ const LEVEL: usize = 12;
 
 pub struct Version {
     files: Vec<Vec<FileMetaData>>,
-    // prev: &'a Version<'a>, // TODO
-    // next: &'a Version<'a>,
+    // Add field COMPACTION_LEVEL
 }
 
 impl Version {
@@ -138,14 +143,38 @@ impl VersionBuilder {
     }
 
     pub fn apply(&mut self, edit: &VersionEdit) {
-        for &(ref meta, ref level) in edit.new_files() {
+        for &(ref meta, ref level) in edit.files() {
             self.added[*level].push(meta.clone());
         }
     }
 
-    pub fn save_to(&mut self) -> Version {
-        let v = Version::new();
-        // for f in self.added {}
-        v
+    // TODO: name
+    pub fn save_to(&self, base: &Version) -> Version {
+        let mut version = Version::new();
+
+        for i in 0..LEVEL {
+            let ref d = self.deleted[i];
+
+            let ref level_files = base.files[i];
+            for f in level_files {
+                if *(d.get(&f.file_num).unwrap_or(&false)) {
+                    continue;
+                }
+                version.files[i].push(f.clone())
+            }
+
+            let ref level_files = self.added[i];
+            for f in level_files {
+                if *(d.get(&f.file_num).unwrap_or(&false)) {
+                    continue;
+                }
+
+                version.files[i].push(f.clone())
+            }
+
+            version.files[i].sort();
+        }
+
+        version
     }
 }

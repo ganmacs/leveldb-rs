@@ -13,10 +13,34 @@ use version::{VersionSet, VersionEdit};
 use table::TableBuilder;
 
 pub fn open(dir: &str) -> LevelDB {
+    setup_level_db(dir);
+
     let mut db = LevelDB::new(dir);
-    let mut edit = VersionEdit::new(0); // XXX
-    db.recover(&mut edit);
+    db.recover();
     db
+}
+
+// Create directory and files which are used by leveldb
+fn setup_level_db(dbname: &str) {
+    if path::Path::new(dbname).exists() {
+        return;
+    }
+
+    fs::create_dir(dbname).expect("failed to create directory");
+
+    let manifest_file_num: usize = 1;
+    let current = filename::FileType::Current(dbname).filename();
+
+    if !path::Path::new(&current).exists() {
+        let edit = VersionEdit::new((manifest_file_num + 1) as u64);
+        let manifest = filename::FileType::Manifest(dbname, manifest_file_num).filename();
+        let mut writer = fs::File::create(manifest)
+            .map(|fs| LogWriter::new(BufWriter::new(fs)))
+            .expect("Failed to create writer for manifest file");
+        edit.encode_to(&mut writer);
+
+        filename::set_current_file(dbname, manifest_file_num);
+    }
 }
 
 pub struct LevelDB {
@@ -29,10 +53,6 @@ pub struct LevelDB {
 
 impl LevelDB {
     fn new(dir: &str) -> Self {
-        if !path::Path::new(&dir).exists() {
-            fs::create_dir(&dir).expect("failed to create directory")
-        }
-
         let mut v = VersionSet::new(dir);
         let fname = filename::FileType::Log(dir, v.next_file_num()).filename();
         let writer =
@@ -64,16 +84,17 @@ impl LevelDB {
         self.apply(b)
     }
 
-    fn recover(&mut self, edit: &mut VersionEdit) {
-        self.setup_metafile();
+    fn recover(&mut self) {
         self.versions.recover();
 
-        let paths = fs::read_dir(&self.dbname).expect("Failed to read log files");
+        let mut edit = VersionEdit::new(0);
+        let paths = fs::read_dir(&self.dbname).expect("Failed to read directory");
+
         for p in paths {
             let path = &p.unwrap().path();
             let ft = filename::FileType::parse_name(path.to_str().unwrap());
             if ft.is_logfile() {
-                self.replay_logfile(path, edit);
+                self.replay_logfile(path, &mut edit);
             }
         }
     }
@@ -116,22 +137,6 @@ impl LevelDB {
 
         for (key_kind, ukey, value) in batch.into_iter() {
             self.mem.add(key_kind, &ukey, &value);
-        }
-    }
-
-    fn setup_metafile(&self) {
-        let manifest_file_num: usize = 1;
-        let current = filename::FileType::Current(&self.dbname).filename();
-
-        if !path::Path::new(&current).exists() {
-            let edit = VersionEdit::new((manifest_file_num + 1) as u64);
-            let manifest = filename::FileType::Manifest(&self.dbname, manifest_file_num).filename();
-            let mut writer = fs::File::create(manifest)
-                .map(|fs| LogWriter::new(BufWriter::new(fs)))
-                .expect("Failed to create writer for manifest file");
-            edit.encode_to(&mut writer);
-
-            filename::set_current_file(&self.dbname, manifest_file_num);
         }
     }
 }

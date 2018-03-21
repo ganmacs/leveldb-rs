@@ -1,4 +1,5 @@
 use ikey::InternalKey2;
+use std::cmp::Ordering;
 
 pub struct FileMetaDataBuilder {
     file_num: Option<u64>,
@@ -63,19 +64,15 @@ impl FileMetaDataBuilder {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, Ord)]
 pub struct FileMetaData {
-    file_num: u64,
+    pub file_num: u64,
     size: u64,
     largest: InternalKey2,
     smallest: InternalKey2,
 }
 
 impl FileMetaData {
-    pub fn file_num(&self) -> u64 {
-        self.file_num
-    }
-
     pub fn size(&self) -> u64 {
         self.size
     }
@@ -86,5 +83,17 @@ impl FileMetaData {
 
     pub fn smallest(&self) -> InternalKey2 {
         self.smallest.clone()
+    }
+}
+
+impl PartialOrd for FileMetaData {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.file_num.cmp(&other.file_num))
+    }
+}
+
+impl PartialEq for FileMetaData {
+    fn eq(&self, other: &Self) -> bool {
+        self.file_num == other.file_num
     }
 }
