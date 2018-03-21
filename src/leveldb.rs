@@ -96,17 +96,25 @@ impl LevelDB {
 
         let mut edit = VersionEdit::new(0);
         let paths = fs::read_dir(&self.dbname).expect("Failed to read directory");
-
+        let mut log_paths = vec![];
         for p in paths {
-            let path = &p.unwrap().path();
-            let ft = filename::FileType::parse_name(path.to_str().unwrap());
-            if ft.is_logfile() {
-                self.replay_logfile(path, &mut edit);
+            if let Some(path) = p.unwrap().path().to_str() {
+                match filename::FileType::parse_name(path) {
+                    filename::FileType::Log(_, num) => {
+                        log_paths.push(filename::SimpleName::new(num, path))
+                    }
+                    _ => (),        // nothing
+                }
             }
+        }
+
+        log_paths.sort();
+        for path in log_paths {
+            self.replay_logfile(&path.name, &mut edit);
         }
     }
 
-    fn replay_logfile(&mut self, path: &path::PathBuf, edit: &mut VersionEdit) {
+    fn replay_logfile(&mut self, path: &str, edit: &mut VersionEdit) {
         debug!("Replay data from log file {:?}", path);
         let reader = fs::File::open(path)
             .map(|fs| LogReader::new(BufReader::new(fs)))

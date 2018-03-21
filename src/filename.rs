@@ -1,6 +1,7 @@
 use regex;
 use std::fs;
 use std::io::Write;
+use std::cmp;
 
 pub enum FileType<'a> {
     Log(&'a str, u64),
@@ -30,6 +31,33 @@ lazy_static!{
     static ref CURRENT_TMP_REGEX: regex::Regex = {
         regex::Regex::new(r"([\w]+)/CURRENT.([\d]{7})").unwrap()
     };
+}
+
+#[derive(Eq, Ord, Debug)]
+pub struct SimpleName {
+    num: u64,
+    pub name: String,
+}
+
+impl SimpleName {
+    pub fn new(num: u64, name: &str) -> Self {
+        Self {
+            num: num,
+            name: name.to_owned(),
+        }
+    }
+}
+
+impl PartialOrd for SimpleName {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.num.cmp(&other.num))
+    }
+}
+
+impl PartialEq for SimpleName {
+    fn eq(&self, other: &Self) -> bool {
+        self.num == other.num
+    }
 }
 
 pub fn set_current_file(dbname: &str, num: usize) {
