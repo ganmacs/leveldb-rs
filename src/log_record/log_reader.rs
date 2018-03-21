@@ -5,11 +5,15 @@ use std::iter::Iterator;
 
 pub struct LogReader<T: Read> {
     inner: T,
+    buffer: BytesMut,
 }
 
 impl<T: Read> LogReader<T> {
     pub fn new(reader: T) -> Self {
-        LogReader { inner: reader }
+        LogReader {
+            inner: reader,
+            buffer: BytesMut::new(),
+        }
     }
 
     pub fn read_record(&mut self) -> Option<Bytes> {
@@ -35,19 +39,16 @@ impl<T: Read> LogReader<T> {
     }
 
     fn read_physical_record(&mut self, ret: &mut Bytes) -> Result<RecordType, &'static str> {
-        let mut v = [0; BLOCK_SIZE];
-        let s = self.inner.read(&mut v).unwrap();
-        if s == 0 {
-            return Ok(RecordType::EOF);
-        }
-        let mut slice = BytesMut::from(&v as &[u8]); // ignore size
-
-        if slice.len() < HEADER_SIZE {
-            return Err("need more size");
+        if self.buffer.len() < HEADER_SIZE {
+            let mut v = [0; BLOCK_SIZE];
+            let s = self.inner.read(&mut v).unwrap();
+            if s == 0 {
+                return Ok(RecordType::EOF);
+            }
+            self.buffer = BytesMut::from(&v[0..s]); // ignore size
         }
 
-        let mut header = slice.split_to(HEADER_SIZE);
-
+        let mut header = self.buffer.split_to(HEADER_SIZE);
         let expected_checksum = {
             let c = header.split_to(CHECKSUM_SIZE);
             LittleEndian::read_u32(&c)
@@ -63,11 +64,18 @@ impl<T: Read> LogReader<T> {
             RecordType::from(c[0])
         };
 
-        let record = slice.split_to(length as usize);
+        let record = self.buffer.split_to(length as usize);
         if crc32(&record) != expected_checksum {
             println!("invalid");
             return Err("validation failed");
         }
+
+        debug!(
+            "length={:?}, rtype={:?}, record={:?}",
+            length,
+            rtype,
+            record
+        );
 
         ret.extend(record);
         Ok(rtype)
