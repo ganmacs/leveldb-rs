@@ -3,6 +3,7 @@ use std::fs;
 use std::str;
 use std::io::{BufWriter, BufReader};
 use bytes::Bytes;
+use env_logger;
 
 use filename;
 use ikey::InternalKey;
@@ -13,6 +14,7 @@ use version::{VersionSet, VersionEdit};
 use table::TableBuilder;
 
 pub fn open(dir: &str) -> LevelDB {
+    env_logger::init();
     setup_level_db(dir);
 
     let mut db = LevelDB::new(dir);
@@ -26,12 +28,14 @@ fn setup_level_db(dbname: &str) {
         return;
     }
 
+    debug!("Create directory {:?}", dbname);
     fs::create_dir(dbname).expect("failed to create directory");
 
     let manifest_file_num: usize = 1;
     let current = filename::FileType::Current(dbname).filename();
 
     if !path::Path::new(&current).exists() {
+        debug!("Create current file {:?}", current);
         let edit = VersionEdit::new((manifest_file_num + 1) as u64);
         let manifest = filename::FileType::Manifest(dbname, manifest_file_num).filename();
         let mut writer = fs::File::create(manifest)
@@ -55,6 +59,7 @@ impl LevelDB {
     fn new(dir: &str) -> Self {
         let mut v = VersionSet::new(dir);
         let fname = filename::FileType::Log(dir, v.next_file_num()).filename();
+        debug!("Use log file {:?}", fname);
         let writer =
             fs::OpenOptions::new() // add read permission?
             .write(true)
@@ -79,12 +84,14 @@ impl LevelDB {
     }
 
     pub fn set(&mut self, key: &str, value: &str) {
+        debug!("Set key={:?}, value={:?}", key, value);
         let mut b = WriteBatch::new();
         b.put(key, value);
         self.apply(b)
     }
 
     fn recover(&mut self) {
+        debug!("Start recovering phase");
         self.versions.recover();
 
         let mut edit = VersionEdit::new(0);
@@ -100,6 +107,7 @@ impl LevelDB {
     }
 
     fn replay_logfile(&mut self, path: &path::PathBuf, edit: &mut VersionEdit) {
+        debug!("Replay data from log file {:?}", path);
         let reader = fs::File::open(path)
             .map(|fs| LogReader::new(BufReader::new(fs)))
             .expect("failed to read log file");
@@ -110,6 +118,7 @@ impl LevelDB {
 
         let mut mem = MemDB::new();
         for (key_kind, ukey, value) in v {
+            debug!("Add data to memdb key={:?}, value={:?}", ukey, value);
             mem.add(key_kind, &ukey, &value);
             // TODO: memory usage is larger than buffer size
         }
@@ -126,6 +135,7 @@ impl LevelDB {
         edit: &mut VersionEdit,
         mem: &mut MemDBIterator,
     ) -> Result<(), &'static str> {
+        debug!("Write to level0 talble");
         let num = self.versions.next_file_num();
         let meta = TableBuilder::build(&self.dbname, mem, num)?;
         edit.add_file(meta, 0);

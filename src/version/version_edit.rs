@@ -67,14 +67,12 @@ impl VersionEdit {
                 let val = record.slice(i, i + 8);
                 i += 8;
                 let v = LittleEndian::read_u64(&val);
-                println!("lognumber {:?}", v);
                 self.log_number = v
             }
             Tag::NextFileNumber => {
                 let val = record.slice(i, i + 8);
                 i += 8;
                 let v = LittleEndian::read_u64(&val);
-                println!("next file number {:?}", v);
                 self.next_file_number = v
             }
             Tag::LastSequence => {}
@@ -116,8 +114,13 @@ impl VersionEdit {
             res.put_slice(&meta.smallest());
         }
 
-        println!("{:?}", res);
-
+        debug!(
+            "Write data log_number={:}, prev_log_number={:?}, next_file_number={:?}, last_sequence={:?} to manifest file",
+            self.log_number,
+            self.prev_log_number,
+            self.next_file_number,
+            self.last_sequence
+        );
         writer.add_record(res.freeze());
     }
 

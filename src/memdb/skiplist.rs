@@ -43,6 +43,12 @@ impl SkipList {
 
         if exact {
             let voffset = self.save(value.as_ref());
+            debug!(
+                "Overwrite value {:?} to {:?} about key={:?}",
+                self.idx.val(n),
+                value,
+                key
+            );
             self.idx.update_val(n, voffset as u16);
             return;
         }

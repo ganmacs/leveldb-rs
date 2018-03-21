@@ -51,6 +51,7 @@ impl VersionSet {
         );
 
         let n = format!("{:}/{:}", &self.dbname, name);
+        debug!("Load current manifest file {:?}", name);
         let reader = fs::File::open(n)
             .map(|fs| LogReader::new(BufReader::new(fs)))
             .expect("failed to read manifest");
@@ -95,9 +96,23 @@ impl VersionSet {
         let mut ver = Version::new();
         let v = vb.save_to(&mut ver);
         self.append(v);
+
+        debug!(
+            "Recovered VersionSet dbname={:}, manifest_file_number={:?}, log_number={:?}, prev_file_number={:?}, next_file_number={:?}, last_sequence={:?}",
+            self.dbname,
+            self.manifest_file_number,
+            self.log_number,
+            self.prev_log_number,
+            self.next_file_number,
+            self.last_sequence
+        );
+
+        debug!("recoverd current version");
+
     }
 
     fn append(&mut self, v: Version) {
+        debug!("Append version {:?}", v);
         self.dummy_version.append(v)
     }
 
@@ -110,6 +125,7 @@ impl VersionSet {
 
 const LEVEL: usize = 12;
 
+#[derive(Debug)]
 pub struct Version {
     files: Vec<Vec<FileMetaData>>,
     // Add field COMPACTION_LEVEL

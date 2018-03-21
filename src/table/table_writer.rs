@@ -16,7 +16,8 @@ impl<T: Write> TableWriter<T> {
 
     pub fn add(&mut self, key: &Bytes, value: &Bytes) {
         self.offset += key.len() + value.len();
-        println!("{:?}=>{:?}", key, value);
+        // TODO: implement
+        debug!("{:?}=>{:?}", key, value);
     }
 
     pub fn size(&self) -> usize {
