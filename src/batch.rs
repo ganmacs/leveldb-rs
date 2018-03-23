@@ -83,6 +83,10 @@ impl WriteBatch {
     pub fn count(&self) -> usize {
         self.count as usize
     }
+
+    pub fn seq(&self) -> usize {
+        self.seq as usize
+    }
 }
 
 impl IntoIterator for WriteBatch {

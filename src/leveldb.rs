@@ -53,6 +53,7 @@ pub struct LevelDB {
     versions: VersionSet,
     mem: MemDB,
     imm: Option<MemDB>,
+    log_nubmer: u64,
 }
 
 impl LevelDB {
@@ -73,6 +74,7 @@ impl LevelDB {
             versions: v,
             mem: MemDB::new(),
             imm: None,
+            log_nubmer: 0,
         }
     }
 
@@ -110,25 +112,53 @@ impl LevelDB {
 
         log_paths.sort();
         for path in log_paths {
-            self.replay_logfile(&path.name, &mut edit);
+            let m = self.replay_logfile(&path.name, &mut edit) as u64;
+            self.versions.mark_file_num_used(path.num);
+            if self.versions.last_sequence < m {
+                debug!("max_seq_num is {:?}", m);
+                self.versions.last_sequence = m;
+            }
         }
+
+        edit.next_file_number = self.versions.next_file_num();
+        self.log_nubmer = edit.next_file_number;
+        let fname = filename::FileType::Log(&self.dbname, edit.next_file_number).filename();
+        debug!("Create new log file {:?}", fname);
+        let writer = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(fname)
+            .map(|fd| LogWriter::new(BufWriter::new(fd)))
+            .expect("failed to create LogWriter");
+
+        self.log = writer;
+
+        self.versions.log_and_apply(&mut edit);
     }
 
-    fn replay_logfile(&mut self, path: &str, edit: &mut VersionEdit) {
+    fn replay_logfile(&mut self, path: &str, edit: &mut VersionEdit) -> usize {
         debug!("Replay data from log file {:?}", path);
         let reader = fs::File::open(path)
             .map(|fs| LogReader::new(BufReader::new(fs)))
             .expect("failed to read log file");
 
-        let v = reader.into_iter().flat_map(
-            |r| WriteBatch::load_data(r).into_iter(),
-        );
-
+        let mut max_seq = 0;
         let mut mem = MemDB::new();
-        for (key_kind, ukey, value) in v {
-            debug!("Add data to memdb key={:?}, value={:?}", ukey, value);
-            mem.add(key_kind, &ukey, &value);
-            // TODO: memory usage is larger than buffer size
+
+        for r in reader.into_iter() {
+            let batch = WriteBatch::load_data(r);
+
+            let num_seq = batch.seq() + batch.count();
+            if max_seq < num_seq {
+                max_seq = num_seq;
+            }
+
+            for (key_kind, ukey, value) in batch.into_iter() {
+                debug!("Add data to memdb key={:?}, value={:?}", ukey, value);
+                mem.add(key_kind, &ukey, &value);
+                // TODO: memory usage is larger than buffer size
+            }
+
         }
 
         if !mem.empty() {
@@ -136,6 +166,8 @@ impl LevelDB {
                 "failed to write write level 0 table",
             )
         }
+
+        return max_seq;
     }
 
     fn write_level0_table(

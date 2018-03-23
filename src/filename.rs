@@ -35,7 +35,7 @@ lazy_static!{
 
 #[derive(Eq, Ord, Debug)]
 pub struct SimpleName {
-    num: u64,
+    pub num: u64,
     pub name: String,
 }
 

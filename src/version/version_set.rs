@@ -1,9 +1,11 @@
 use std::collections::HashMap;
-use filename::FileType;
 use std::fs;
 use std::io::Read;
 use std::io::BufReader;
-use log_record::LogReader;
+use std::io::BufWriter;
+
+use log_record::{LogReader, LogWriter};
+use filename;
 use super::{VersionEdit, FileMetaData, CircularLinkedList};
 
 pub struct VersionSet {
@@ -17,6 +19,7 @@ pub struct VersionSet {
     // dummy_version is the head of a doubly-linked list of versions.
     // dummy_Version.prev is the current version.
     dummy_version: CircularLinkedList<Version>,
+    manifest: Option<LogWriter<BufWriter<fs::File>>>,
 }
 
 impl VersionSet {
@@ -29,11 +32,71 @@ impl VersionSet {
             prev_log_number: 0,
             last_sequence: 0,
             dummy_version: CircularLinkedList::new(Version::new()),
+            manifest: None,
         }
     }
 
     pub fn current(&self) -> Option<&Version> {
         self.dummy_version.current()
+    }
+
+    pub fn log_and_apply(&mut self, edit: &mut VersionEdit) {
+        // TODO: check log versoin is consistent
+
+        if self.manifest.is_none() {
+            self.create_manifest_file();
+        }
+
+        edit.next_file_number = self.next_file_number;
+        edit.last_sequence = self.last_sequence;
+        if let Some(m) = self.manifest.as_mut() {
+            edit.encode_to(m);
+        }
+        filename::set_current_file(&self.dbname, self.manifest_file_number as usize);
+
+        let mut vb = VersionBuilder::new();
+        vb.apply(edit);
+
+        let v = {
+            let c = self.current().expect("current version does not exist");
+            vb.save_to(c)
+        };
+        self.append(v);
+
+        if edit.log_number != 0 {
+            self.log_number = edit.log_number;
+        }
+
+        if edit.prev_log_number != 0 {
+            self.prev_log_number = edit.prev_log_number;
+        }
+    }
+
+    fn create_manifest_file(&mut self) {
+        let manifest =
+            filename::FileType::Manifest(&self.dbname, self.manifest_file_number as usize)
+                .filename();
+
+        debug!("open new manifest_file {:?}", manifest);
+        let mut writer = fs::File::create(manifest)
+            .map(|fs| LogWriter::new(BufWriter::new(fs)))
+            .expect("Failed to create writer for manifest file");
+
+        // Save compaction pointers
+
+        let mut edit = VersionEdit::new(0); // 0 is ok?
+        if let Some(current_version) = self.current() {
+            for i in 0..LEVEL {
+                for meta in current_version.files[i].iter() {
+                    edit.add_file(meta.clone(), i);
+                }
+            }
+        }
+
+        debug!("Save current version info");
+        edit.encode_to(&mut writer);
+
+        self.manifest = Some(writer);
     }
 
     pub fn next_file_num(&mut self) -> u64 {
@@ -43,7 +106,7 @@ impl VersionSet {
     }
 
     pub fn recover(&mut self) {
-        let current = FileType::Current(&self.dbname).filename();
+        let current = filename::FileType::Current(&self.dbname).filename();
         let mut fs = fs::File::open(current).expect("fail to open current file");
         let mut name = String::new();
         fs.read_to_string(&mut name).expect(
@@ -111,15 +174,15 @@ impl VersionSet {
 
     }
 
-    fn append(&mut self, v: Version) {
-        debug!("Append version {:?}", v);
-        self.dummy_version.append(v)
-    }
-
-    fn mark_file_num_used(&mut self, num: u64) {
+    pub fn mark_file_num_used(&mut self, num: u64) {
         if self.next_file_number <= num {
             self.next_file_number = num + 1
         }
+    }
+
+    fn append(&mut self, v: Version) {
+        debug!("Append version {:?}", v);
+        self.dummy_version.append(v)
     }
 }
 
@@ -127,8 +190,8 @@ const LEVEL: usize = 12;
 
 #[derive(Debug)]
 pub struct Version {
-    files: Vec<Vec<FileMetaData>>,
-    // Add field COMPACTION_LEVEL
+    files: Vec<Vec<FileMetaData>>, // table type file
+                                   // Add field COMPACTION_LEVEL
 }
 
 impl Version {

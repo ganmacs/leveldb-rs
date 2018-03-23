@@ -1,7 +1,7 @@
 use bytes::{Bytes, BufMut, BytesMut, LittleEndian, ByteOrder};
 use log_record::LogWriter;
 use std::io::Write;
-use self::super::FileMetaData;
+use super::{FileMetaData, BLOCK_SIZE};
 
 enum Tag {
     Comparator = 1,
@@ -84,7 +84,7 @@ impl VersionEdit {
     }
 
     pub fn encode_to<T: Write>(&self, writer: &mut LogWriter<T>) {
-        let mut res = BytesMut::new();
+        let mut res = BytesMut::with_capacity(BLOCK_SIZE);
 
         if self.log_number != 0 {
             res.put_u8(Tag::LogNumber as u8);
