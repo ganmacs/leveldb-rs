@@ -89,11 +89,14 @@ impl LevelDB {
         let mut edit = VersionEdit::new(0);
         let paths = fs::read_dir(&self.dbname).expect("Failed to read directory");
         let mut log_paths = vec![];
+        let min_log = self.log_nubmer;
         for p in paths {
             if let Some(path) = p.unwrap().path().to_str() {
                 match filename::FileType::parse_name(path) {
                     filename::FileType::Log(_, num) => {
-                        log_paths.push(filename::SimpleName::new(num, path))
+                        if num >= min_log {
+                            log_paths.push(filename::SimpleName::new(num, path))
+                        }
                     }
                     _ => (),        // nothing
                 }
