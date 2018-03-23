@@ -112,18 +112,45 @@ impl LevelDB {
 
         edit.next_file_number = self.versions.next_file_num();
         self.log_nubmer = edit.next_file_number;
-        let fname = filename::FileType::Log(&self.dbname, edit.next_file_number).filename();
-        debug!("Create new log file {:?}", fname);
-        let writer = fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(fname)
-            .map(|fd| LogWriter::new(BufWriter::new(fd)))
-            .expect("failed to create LogWriter");
-
-        self.log = writer;
+        let fname = filename::FileType::Log(&self.dbname, self.log_nubmer).filename();
+        debug!("Use log file {:?}", fname);
+        self.log = Some(
+            fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(fname)
+                .map(|fd| LogWriter::new(BufWriter::new(fd)))
+                .expect("failed to create LogWriter"), // should be validate here
+        );
 
         self.versions.log_and_apply(&mut edit);
+
+        self.delete_obsolete_file()
+    }
+
+    fn delete_obsolete_file(&self) {
+        let live_files = self.versions.live_files();
+
+        let paths = fs::read_dir(&self.dbname).expect("Failed to read directory");
+        for p in paths {
+            if let Some(path) = p.unwrap().path().to_str() {
+                let keep = match filename::FileType::parse_name(path) {
+                    filename::FileType::Log(_, num) => num >= self.versions.log_number, // XXX
+                    filename::FileType::Manifest(_, num) => {
+                        num >= (self.versions.manifest_file_number as usize)
+                    }
+                    filename::FileType::Table(_, num) => {
+                        live_files.iter().find(|&&v| v == num).is_some()
+                    }
+                    _ => true,
+                };
+
+                if !keep {
+                    debug!("Delete obsolete file {:?}", path);
+                    fs::remove_file(path).unwrap() // TODO: error mssage
+                }
+            }
+        }
     }
 
     fn replay_logfile(&mut self, path: &str, edit: &mut VersionEdit) -> usize {

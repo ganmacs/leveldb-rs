@@ -10,7 +10,7 @@ use super::{VersionEdit, FileMetaData, CircularLinkedList};
 
 pub struct VersionSet {
     dbname: String,
-    manifest_file_number: u64,
+    pub manifest_file_number: u64,
     pub log_number: u64,
     pub next_file_number: u64,
     pub prev_log_number: u64,
@@ -45,6 +45,11 @@ impl VersionSet {
 
         if self.manifest.is_none() {
             self.create_manifest_file();
+        }
+
+
+        if edit.log_number == 0 {
+            edit.log_number = self.log_number
         }
 
         edit.next_file_number = self.next_file_number;
@@ -183,6 +188,20 @@ impl VersionSet {
     fn append(&mut self, v: Version) {
         debug!("Append version {:?}", v);
         self.dummy_version.append(v)
+    }
+
+    pub fn live_files(&self) -> Vec<u64> {
+        let mut vec = vec![];
+        for v in self.dummy_version.iter() {
+            for level in 0..12 {
+                let ref fmds: Vec<FileMetaData> = v.files[level];
+                for md in fmds {
+                    vec.push(md.file_num);
+                }
+            }
+        }
+
+        return vec;
     }
 }
 
