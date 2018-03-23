@@ -48,7 +48,7 @@ fn setup_level_db(dbname: &str) {
 }
 
 pub struct LevelDB {
-    log: LogWriter<BufWriter<fs::File>>,
+    log: Option<LogWriter<BufWriter<fs::File>>>,
     dbname: String,
     versions: VersionSet,
     mem: MemDB,
@@ -58,20 +58,10 @@ pub struct LevelDB {
 
 impl LevelDB {
     fn new(dir: &str) -> Self {
-        let mut v = VersionSet::new(dir);
-        let fname = filename::FileType::Log(dir, v.next_file_num()).filename();
-        debug!("Use log file {:?}", fname);
-        let writer =
-            fs::OpenOptions::new() // add read permission?
-            .write(true)
-            .create(true)
-            .open(fname)
-            .map( |fd| LogWriter::new(BufWriter::new(fd))).expect("failed to create LogWriter");
-
         Self {
             dbname: dir.to_owned(),
-            log: writer,
-            versions: v,
+            log: None,
+            versions: VersionSet::new(dir),
             mem: MemDB::new(),
             imm: None,
             log_nubmer: 0,
@@ -183,7 +173,7 @@ impl LevelDB {
     }
 
     pub fn apply(&mut self, batch: WriteBatch) {
-        self.log.add_record(batch.data());
+        self.log.as_mut().map(|l| l.add_record(batch.data()));
 
         for (key_kind, ukey, value) in batch.into_iter() {
             self.mem.add(key_kind, &ukey, &value);
