@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 
 pub struct FileMetaDataBuilder {
     file_num: Option<u64>,
-    size: Option<u64>,
+    file_size: Option<u64>,
     largest: Option<InternalKey2>,
     smallest: Option<InternalKey2>,
 }
@@ -12,7 +12,7 @@ impl FileMetaDataBuilder {
     pub fn new() -> Self {
         FileMetaDataBuilder {
             file_num: None,
-            size: None,
+            file_size: None,
             largest: None,
             smallest: None,
         }
@@ -23,8 +23,8 @@ impl FileMetaDataBuilder {
         self
     }
 
-    pub fn size(&mut self, size: u64) -> &Self {
-        self.size = Some(size);
+    pub fn file_size(&mut self, size: u64) -> &Self {
+        self.file_size = Some(size);
         self
     }
 
@@ -43,7 +43,7 @@ impl FileMetaDataBuilder {
             return Err("file num must be set");
         }
 
-        if self.size.is_none() {
+        if self.file_size.is_none() {
             return Err("size must be set");
         }
 
@@ -57,7 +57,7 @@ impl FileMetaDataBuilder {
 
         Ok(FileMetaData {
             file_num: self.file_num.unwrap(),
-            size: self.size.unwrap(),
+            file_size: self.file_size.unwrap(),
             largest: self.largest.unwrap(),
             smallest: self.smallest.unwrap(),
         })
@@ -67,16 +67,12 @@ impl FileMetaDataBuilder {
 #[derive(Clone, Eq, Ord, Debug)]
 pub struct FileMetaData {
     pub file_num: u64,
-    size: u64,
+    pub file_size: u64,
     largest: InternalKey2,
     smallest: InternalKey2,
 }
 
 impl FileMetaData {
-    pub fn size(&self) -> u64 {
-        self.size
-    }
-
     pub fn largest(&self) -> InternalKey2 {
         self.largest.clone()
     }

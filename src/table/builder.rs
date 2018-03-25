@@ -14,8 +14,8 @@ impl TableBuilder {
         iterator: &mut MemDBIterator,
         num: u64,
     ) -> Result<FileMetaData, &'static str> {
-        let mut meta = FileMetaDataBuilder::new();
-        meta.file_num(num);
+        let mut meta_builder = FileMetaDataBuilder::new();
+        meta_builder.file_num(num);
 
         let fname = FileType::Table(dbname, num).filename();
         let fd = fs::OpenOptions::new() // add read permission?
@@ -29,15 +29,14 @@ impl TableBuilder {
 
         for (i, (k, v)) in iterator.enumerate() {
             if i == 0 {
-                meta.smallest(k.clone());
+                meta_builder.smallest(k.clone());
             }
 
             writer.add(&k, &v);
-            meta.largest(k); // must clone
+            meta_builder.largest(k); // must clone
         }
 
-
-        meta.size(writer.size() as u64);
-        meta.build()
+        meta_builder.file_size(writer.size() as u64);
+        meta_builder.build()
     }
 }
