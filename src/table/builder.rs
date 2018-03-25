@@ -1,42 +1,29 @@
-use super::TableWriter;
-use memdb::MemDBIterator;
-use std::io::BufWriter;
-use version::{FileMetaDataBuilder, FileMetaData};
 use std::fs;
-use filename::FileType;
+use std::io::BufWriter;
+use bytes::Bytes;
+use table::table_writer::TableWriter;
+use table::block_builder::BlockBuilder;
 
-pub struct TableBuilder {}
-
+pub struct TableBuilder {
+    writer: TableWriter<BufWriter<fs::File>>,
+}
 
 impl TableBuilder {
-    pub fn build(
-        dbname: &str,
-        iterator: &mut MemDBIterator,
-        num: u64,
-    ) -> Result<FileMetaData, &'static str> {
-        let mut meta_builder = FileMetaDataBuilder::new();
-        meta_builder.file_num(num);
-
-        let fname = FileType::Table(dbname, num).filename();
+    pub fn new(fname: &str) -> Self {
         let fd = fs::OpenOptions::new() // add read permission?
             .write(true)
             .create(true)
             .open(fname)
             .unwrap();
 
-        let bw = BufWriter::new(fd);
-        let mut writer = TableWriter::new(bw);
+        Self { writer: TableWriter::new(BufWriter::new(fd)) }
+    }
 
-        for (i, (k, v)) in iterator.enumerate() {
-            if i == 0 {
-                meta_builder.smallest(k.clone());
-            }
+    pub fn add(&mut self, key: &Bytes, value: &Bytes) {}
 
-            writer.add(&k, &v);
-            meta_builder.largest(k); // must clone
-        }
+    pub fn build(&mut self) {}
 
-        meta_builder.file_size(writer.size() as u64);
-        meta_builder.build()
+    pub fn size(&self) -> usize {
+        0
     }
 }

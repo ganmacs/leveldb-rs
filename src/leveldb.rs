@@ -11,7 +11,7 @@ use memdb::{MemDBIterator, MemDB};
 use batch::WriteBatch;
 use log_record::{LogReader, LogWriter};
 use version::{VersionSet, VersionEdit};
-use table::TableBuilder;
+use table;
 
 pub fn open(dir: &str) -> LevelDB {
     env_logger::init();
@@ -197,8 +197,8 @@ impl LevelDB {
     ) -> Result<(), &'static str> {
         debug!("Write to level0 talble");
         let num = self.versions.next_file_num();
-        let meta = TableBuilder::build(&self.dbname, mem, num)?;
         edit.add_file(meta, 0);
+        let meta = table::bulid(&self.dbname, mem, num)?;
         Ok(())
     }
 
