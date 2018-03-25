@@ -7,6 +7,10 @@ use memdb::MemDBIterator;
 use filename;
 use self::builder::TableBuilder;
 
+enum Compression {
+    No,
+}
+
 pub fn bulid(
     dbname: &str,
     iterator: &mut MemDBIterator,

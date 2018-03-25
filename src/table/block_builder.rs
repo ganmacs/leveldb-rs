@@ -23,6 +23,7 @@ pub struct BlockBuilder {
     counter: usize,
     restarts: Vec<u32>,
     last_key: Bytes,
+    finished: bool,
 }
 
 impl BlockBuilder {
@@ -32,6 +33,7 @@ impl BlockBuilder {
             counter: 0,
             restarts: vec![],
             last_key: Bytes::new(),
+            finished: false,
         }
     }
 
@@ -40,6 +42,10 @@ impl BlockBuilder {
     }
 
     pub fn add(&mut self, key: &Bytes, value: &Bytes) {
+        if self.finished {
+            panic!("Adding item to built BlockBuilder")
+        }
+
         let mut shared = 0;
 
         if self.counter < RESTART_INTERVAL {
@@ -67,13 +73,18 @@ impl BlockBuilder {
         self.last_key = key.to_owned();
     }
 
-    pub fn build(mut self) -> Bytes {
+    pub fn build(&mut self) -> Bytes {
         let ref r = self.restarts;
         for i in r {
             self.buff.put_u32::<LittleEndian>(*i)
         }
         self.buff.put_u32::<LittleEndian>(r.len() as u32);
-        self.buff.freeze()
+        self.finished = true;
+        Bytes::from(self.buff.as_ref())
+    }
+
+    pub fn empty(&self) -> bool {
+        self.buff.len() == 0
     }
 }
 

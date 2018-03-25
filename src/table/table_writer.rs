@@ -1,12 +1,12 @@
-use std::io::Write;
+use std::io;
 use bytes::Bytes;
 
-pub struct TableWriter<T: Write> {
+pub struct TableWriter<T: io::Write> {
     inner: T,
     offset: usize,
 }
 
-impl<T: Write> TableWriter<T> {
+impl<T: io::Write> TableWriter<T> {
     pub fn new(writer: T) -> TableWriter<T> {
         TableWriter {
             inner: writer,
@@ -14,10 +14,9 @@ impl<T: Write> TableWriter<T> {
         }
     }
 
-    pub fn add(&mut self, key: &Bytes, value: &Bytes) {
-        self.offset += key.len() + value.len();
-        // TODO: implement
-        debug!("{:?}=>{:?}", key, value);
+    pub fn write(&mut self, content: &Bytes) -> Result<usize, io::Error> {
+        self.offset += content.len();
+        self.inner.write(content)
     }
 
     pub fn size(&self) -> usize {
