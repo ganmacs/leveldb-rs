@@ -1,3 +1,4 @@
+use std::cmp;
 use bytes::{BytesMut, Bytes, LittleEndian, BufMut};
 
 // An entry for a particular key-value pair has the form:
@@ -21,7 +22,7 @@ pub struct BlockBuilder {
     buff: BytesMut,
     counter: usize,
     restarts: Vec<u32>,
-    last_key: String,
+    last_key: Bytes,
 }
 
 impl BlockBuilder {
@@ -30,7 +31,7 @@ impl BlockBuilder {
             buff: BytesMut::with_capacity(1024),
             counter: 0,
             restarts: vec![],
-            last_key: "".to_owned(),
+            last_key: Bytes::new(),
         }
     }
 
@@ -38,16 +39,14 @@ impl BlockBuilder {
         self.buff.len() + (U32_ADDR_SIZE * (1 + self.restarts.len()))
     }
 
-    pub fn add(&mut self, key: &str, value: &str) {
+    pub fn add(&mut self, key: &Bytes, value: &Bytes) {
         let mut shared = 0;
 
         if self.counter < RESTART_INTERVAL {
-            let mut k1 = key.bytes();
-            let mut k2 = self.last_key.bytes();
-            loop {
-                let v = k1.next();
-                if v.is_some() && v == k2.next() {
-                    shared += 1;
+            let min_size = cmp::min(key.len(), self.last_key.len());
+            for i in 0..min_size {
+                if key[i] == self.last_key[i] {
+                    shared = i + 1;
                 } else {
                     break;
                 }
@@ -58,15 +57,12 @@ impl BlockBuilder {
             self.restarts.push(self.buff.len() as u32)
         }
 
-        let not_shared = (key.len() as u32) - shared;
-
-        self.buff.put_u32::<LittleEndian>(shared);
-        self.buff.put_u32::<LittleEndian>(not_shared);
+        let not_shared = key.len() - shared;
+        self.buff.put_u32::<LittleEndian>(shared as u32);
+        self.buff.put_u32::<LittleEndian>(not_shared as u32);
         self.buff.put_u32::<LittleEndian>(value.len() as u32);
-        self.buff.extend_from_slice(
-            key[(shared as usize)..key.len()].as_ref(),
-        );
-        self.buff.extend_from_slice(value.as_bytes());
+        self.buff.extend_from_slice(key[shared..key.len()].as_ref());
+        self.buff.extend_from_slice(value);
 
         self.last_key = key.to_owned();
     }
@@ -83,14 +79,14 @@ impl BlockBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{BlockBuilder, U32_ADDR_SIZE};
+    use super::{BlockBuilder, U32_ADDR_SIZE, Bytes};
 
     #[test]
     fn test_block_builder() {
         let mut bb = BlockBuilder::new();
 
         for i in 0..2 {
-            bb.add(&format!("key{:?}", i), "value");
+            bb.add(&Bytes::from(format!("key{:?}", i)), &Bytes::from("value"));
         }
 
         let v = bb.build();
@@ -105,13 +101,12 @@ mod tests {
         let mut bb = BlockBuilder::new();
 
         for i in 0..16 {
-            bb.add(&format!("key{:?}", i), "v");
+            bb.add(&Bytes::from(format!("key{:?}", i)), &Bytes::from("v"));
         }
 
-        // trim trailer(starters) info
         let s = bb.current_size_estimate() - (U32_ADDR_SIZE);
-        bb.add("key16", "v");
-        bb.add("key17", "v");
+        bb.add(&Bytes::from("key16"), &Bytes::from("v"));
+        bb.add(&Bytes::from("key17"), &Bytes::from("v"));
 
         let v = bb.build().slice_from(s);
         let vv: Vec<u8> = vec![
