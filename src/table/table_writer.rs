@@ -19,7 +19,7 @@ impl<T: io::Write> TableWriter<T> {
         self.inner.write(content)
     }
 
-    pub fn size(&self) -> usize {
-        self.offset
+    pub fn offset(&self) -> u64 {
+        self.offset as u64
     }
 }
