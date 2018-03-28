@@ -1,11 +1,13 @@
 mod builder;
 mod table_writer;
 mod block_builder;
+mod block_format;
 
 use version::{FileMetaDataBuilder, FileMetaData};
 use memdb::MemDBIterator;
 use filename;
 use self::builder::TableBuilder;
+// use self::block_format;
 
 enum Compression {
     No,
