@@ -1,4 +1,10 @@
-use bytes::{Bytes, BytesMut, LittleEndian, BufMut, ByteOrder};
+use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
+use slice::SliceMut;
+// TABLE_MAGIC_NUMBER was picked by running
+//    echo http://code.google.com/p/leveldb/ | sha1sum
+// and taking the leading 64 bits.
+
+const TABLE_MAGIC_NUMBER: i64 = 0xdb4775248b80fb57;
 
 pub struct BlockHandle {
     pub size: Option<u64>, // varint64?
@@ -48,12 +54,35 @@ impl BlockHandle {
         self.offset = Some(v)
     }
 
-    pub fn encode(&self) -> Bytes {
-        let mut b = BytesMut::with_capacity(10);
+    pub fn encode(&self) -> SliceMut {
+        let mut slice = SliceMut::with_capacity(10);
         let size = self.size.expect("size must be set");
-        b.put_u64::<LittleEndian>(size);
+        slice.put_u64(size);
         let offset = self.offset.expect("offset must be set");
-        b.put_u64::<LittleEndian>(offset);
-        b.freeze()
+        slice.put_u64(offset);
+        slice
+    }
+}
+
+pub struct Footer {
+    index_block_hanel: BlockHandle,
+    metaindex_block_hanel: BlockHandle,
+}
+
+impl Footer {
+    pub fn new(ibh: BlockHandle, mbh: BlockHandle) -> Self {
+        Self {
+            index_block_hanel: ibh,
+            metaindex_block_hanel: mbh,
+        }
+    }
+
+    pub fn encode(&self) -> SliceMut {
+        let mut slice = SliceMut::with_capacity(2 * 10 + 8);
+        slice.put(&self.index_block_hanel.encode());
+        slice.put(&self.metaindex_block_hanel.encode());
+        slice.resize(2 * 10 + 8);
+        slice.put_i64(TABLE_MAGIC_NUMBER);
+        slice
     }
 }

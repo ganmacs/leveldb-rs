@@ -1,5 +1,5 @@
 use std::ptr;
-use bytes::{BufMut, ByteOrder, LittleEndian};
+use bytes::{BufMut, ByteOrder, Bytes, LittleEndian};
 
 const U64_BYTE_SIZE: usize = 8;
 const U32_BYTE_SIZE: usize = 4;
@@ -62,11 +62,11 @@ impl ImmSlice {
 }
 
 #[derive(Debug)]
-struct MutSlice {
+pub struct SliceMut {
     inner: Vec<u8>,
 }
 
-impl MutSlice {
+impl SliceMut {
     pub fn with_capacity(size: usize) -> Self {
         Self {
             inner: Vec::with_capacity(size),
@@ -77,6 +77,18 @@ impl MutSlice {
         Self {
             inner: Vec::from(inner),
         }
+    }
+
+    // TODO: delete
+    pub fn from_bytes(bytes: &Bytes) -> Self {
+        Self {
+            inner: Vec::from(bytes.as_ref()),
+        }
+    }
+
+    // TODO: delete
+    pub fn to_bytes(self) -> Bytes {
+        Bytes::from(self.inner)
     }
 
     pub fn len(&self) -> usize {
@@ -103,15 +115,30 @@ impl MutSlice {
         U64_BYTE_SIZE
     }
 
+    pub fn put_i64(&mut self, n: i64) -> usize {
+        self.inner.put_i64::<LittleEndian>(n);
+        U64_BYTE_SIZE + 1 // XXX
+    }
+
     pub fn put_str(&mut self, n: &str) -> usize {
         let s = n.len();
         self.inner.put_slice(n.as_bytes());
         s
     }
 
+    pub fn resize(&mut self, size: usize) {
+        self.inner.resize(size, 0)
+    }
+
     pub fn put(&mut self, n: &Self) -> usize {
         let s = n.len();
         self.inner.put(n.inner.clone());
+        s
+    }
+
+    pub fn put_slice(&mut self, n: &[u8]) -> usize {
+        let s = n.len();
+        self.inner.put(n);
         s
     }
 
@@ -174,13 +201,19 @@ impl MutSlice {
     }
 }
 
+impl AsRef<[u8]> for SliceMut {
+    fn as_ref(&self) -> &[u8] {
+        self.inner.as_ref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::MutSlice;
+    use super::SliceMut;
 
     #[test]
     fn write_full_record() {
-        let mut slice = MutSlice::with_capacity(100);
+        let mut slice = SliceMut::with_capacity(100);
         slice.put_u8(1);
         assert_eq!(slice.len(), 1);
         slice.put_u16(2);

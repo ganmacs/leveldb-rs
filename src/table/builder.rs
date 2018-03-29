@@ -1,11 +1,9 @@
-use std::{fs, cmp};
+use std::{cmp, fs};
 use std::io::BufWriter;
 use crc::{Hasher32, crc32};
-use bytes::{BytesMut, Bytes, LittleEndian, BufMut};
-use table::table_writer::TableWriter;
-use table::block_builder::BlockBuilder;
-use table::block_format::BlockHandle;
-use super::Compression;
+use bytes::{BufMut, Bytes, BytesMut, LittleEndian};
+use table::{Compression, block_builder::BlockBuilder, block_format::{BlockHandle, Footer},
+            table_writer::TableWriter};
 
 pub struct TableBuilder {
     writer: TableWriter<BufWriter<fs::File>>,
@@ -62,7 +60,7 @@ impl TableBuilder {
         if self.pending_index_entry {
             let ss = TableBuilder::short_sep(key, &self.last_key);
             let content = self.pending_handle.encode();
-            self.index_block.add(&ss, &content);
+            self.index_block.add(&ss, &content.to_bytes());
             self.pending_index_entry = false;
         }
 
@@ -77,27 +75,35 @@ impl TableBuilder {
             // TODO: write filter block
         }
 
-        // let metaindex_block_handle = {
-        //     let mut meta_index_block = BlockBuilder::new();
-        //     if let Some(_) = self.filter_block {
-        //         // TODO: write filter block
-        //     }
-        //     let content = meta_index_block.build();
-        //     self.write_block(&content)
-        // };
+        let metaindex_block_handle = {
+            let mut meta_index_block = BlockBuilder::new();
+            if let Some(_) = self.filter_block {
+                // TODO: write filter block
+            }
+            let content = meta_index_block.build();
+            self.write_block(&content)
+        };
 
         // index
         let index_block_handle = {
             if self.pending_index_entry {
                 let ss = TableBuilder::succ(&self.last_key);
                 let content = self.pending_handle.encode();
-                self.index_block.add(&ss, &content);
+                self.index_block.add(&ss, &content.to_bytes());
                 self.pending_index_entry = false;
             }
             let content = self.index_block.build();
             self.write_block(&content)
         };
 
+        // footer
+        {
+            let footer = Footer::new(index_block_handle, metaindex_block_handle);
+            let content = footer.encode();
+            self.writer
+                .write(content.as_ref())
+                .expect("Writing data is failed");
+        }
     }
 
     pub fn size(&self) -> usize {
@@ -133,9 +139,9 @@ impl TableBuilder {
         let mut v = BytesMut::with_capacity(TRAILER_SIZE);
         v.put_u8(kind);
         v.put_u32::<LittleEndian>(crc);
-        self.writer.write(&v.freeze()).expect(
-            "Writing data is failed",
-        );
+        self.writer
+            .write(&v.freeze())
+            .expect("Writing data is failed");
 
         BlockHandle::from(content.len() as u64, self.writer.offset())
     }
