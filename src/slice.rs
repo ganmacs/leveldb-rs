@@ -235,12 +235,96 @@ impl ops::Index<ops::Range<usize>> for Slice {
     }
 }
 
+impl PartialEq<Slice> for Slice {
+    fn eq(&self, other: &Slice) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl PartialOrd<Slice> for Slice {
+    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
+        (self.inner).partial_cmp(&other.inner)
+    }
+}
+
+impl PartialEq<[u8]> for Slice {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.as_ref() == other
+    }
+}
+
+impl PartialOrd<[u8]> for Slice {
+    fn partial_cmp(&self, other: &[u8]) -> Option<cmp::Ordering> {
+        (self.as_ref()).partial_cmp(other)
+    }
+}
+
+impl PartialEq<Slice> for [u8] {
+    fn eq(&self, other: &Slice) -> bool {
+        other == self
+    }
+}
+
+impl PartialOrd<Slice> for [u8] {
+    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
+        other.partial_cmp(self)
+    }
+}
+
+impl PartialEq<str> for Slice {
+    fn eq(&self, other: &str) -> bool {
+        self == other.as_bytes()
+    }
+}
+
+impl PartialOrd<str> for Slice {
+    fn partial_cmp(&self, other: &str) -> Option<cmp::Ordering> {
+        self.partial_cmp(other.as_bytes())
+    }
+}
+
+impl PartialEq<Slice> for str {
+    fn eq(&self, other: &Slice) -> bool {
+        other == self
+    }
+}
+
+impl PartialOrd<Slice> for str {
+    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
+        other.partial_cmp(self)
+    }
+}
+
+impl PartialEq<Vec<u8>> for Slice {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        &self.inner[..] == &other[..]
+    }
+}
+
+impl PartialOrd<Vec<u8>> for Slice {
+    fn partial_cmp(&self, other: &Vec<u8>) -> Option<cmp::Ordering> {
+        (self.inner[..]).partial_cmp(&other[..])
+    }
+}
+
+impl PartialEq<Slice> for Vec<u8> {
+    fn eq(&self, other: &Slice) -> bool {
+        other == self
+    }
+}
+
+impl PartialOrd<Slice> for Vec<u8> {
+    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
+        other.partial_cmp(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Slice;
 
     #[test]
-    fn write_full_record() {
+    fn read_and_write_slice_test() {
         let mut slice = Slice::with_capacity(100);
         slice.put_u8(1);
         assert_eq!(slice.len(), 1);
@@ -260,5 +344,24 @@ mod tests {
         assert_eq!(slice.len(), 8);
         assert_eq!(slice.read_u64(), Some(4));
         assert_eq!(slice.len(), 0);
+    }
+
+    #[test]
+    fn slice_ord_test() {
+        let slice = Slice::from(b"bbb");
+        let slice2 = Slice::from(b"bba");
+        let slice3 = Slice::from(b"baa");
+
+        assert!(slice == slice);
+        assert!(slice > slice2);
+        assert!(slice3 < slice2);
+
+        assert!(&slice > "bba");
+        assert!(&slice > "baa");
+        assert!(&slice > "baa");
+
+        assert!(slice > b"bba".to_vec());
+        assert!(slice > b"baa".to_vec());
+        assert!(slice > b"baa".to_vec());
     }
 }
