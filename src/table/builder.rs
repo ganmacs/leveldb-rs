@@ -1,9 +1,10 @@
-use std::{cmp, fs};
+use std::fs;
 use std::io::BufWriter;
 use crc::{Hasher32, crc32};
-use bytes::{BufMut, Bytes, BytesMut, LittleEndian};
 use table::{Compression, block_builder::BlockBuilder, block_format::{BlockHandle, Footer},
             table_writer::TableWriter};
+use slice::Slice;
+use slice;
 
 pub struct TableBuilder {
     writer: TableWriter<BufWriter<fs::File>>,
@@ -12,7 +13,7 @@ pub struct TableBuilder {
     filter_block: Option<u64>, // FIX
     pending_handle: BlockHandle,
     pending_index_entry: bool,
-    last_key: Bytes,
+    last_key: Slice,
 }
 
 const TRAILER_SIZE: usize = 5;
@@ -32,35 +33,16 @@ impl TableBuilder {
             pending_handle: BlockHandle::new(),
             pending_index_entry: false,
             filter_block: None,
-            last_key: Bytes::new(),
+            last_key: Slice::new(),
         }
     }
 
-    pub fn succ(key: &Bytes) -> Bytes {
-        key.clone() // FIX
-    }
-
-    pub fn short_sep(k1: &Bytes, k2: &Bytes) -> Bytes {
-        let mut count = 0;
-        let min_size = cmp::min(k1.len(), k2.len());
-        for i in 0..min_size {
-            if k1[i] == k2[i] {
-                count += 1;
-            } else {
-                // let mut k =  k1.slice(0, count-1);
-                // let v = k1.slice(count, count+1) as u8;
-                // k.extend(v+1)
-                return k1.slice(0, count - 1); // should be incrementd
-            }
-        }
-        k1.clone()
-    }
-
-    pub fn add(&mut self, key: &Bytes, value: &Bytes) {
+    pub fn add(&mut self, key: &mut Slice, value: &Slice) {
         if self.pending_index_entry {
-            let ss = TableBuilder::short_sep(key, &self.last_key);
+            slice::short_successor(key);
+
             let content = self.pending_handle.encode();
-            self.index_block.add(&ss, &content.to_bytes());
+            self.index_block.add(key, &content);
             self.pending_index_entry = false;
         }
 
@@ -87,9 +69,10 @@ impl TableBuilder {
         // index
         let index_block_handle = {
             if self.pending_index_entry {
-                let ss = TableBuilder::succ(&self.last_key);
+                slice::short_successor(&mut self.last_key);
+                // let ss = TableBuilder::succ(&self.last_key);
                 let content = self.pending_handle.encode();
-                self.index_block.add(&ss, &content.to_bytes());
+                self.index_block.add(&self.last_key, &content);
                 self.pending_index_entry = false;
             }
             let content = self.index_block.build();
@@ -120,29 +103,35 @@ impl TableBuilder {
         self.pending_index_entry = true;
     }
 
-    fn write_block(&mut self, content: &Bytes) -> BlockHandle {
+    fn write_block(&mut self, content: &Slice) -> BlockHandle {
         let kind = Compression::No;
         self.write_raw_block(content, kind)
     }
 
-    fn write_raw_block(&mut self, content: &Bytes, kindt: Compression) -> BlockHandle {
+    fn write_raw_block(&mut self, content: &Slice, kindt: Compression) -> BlockHandle {
         let kind = kindt as u8;
-        self.writer.write(content).expect("Writing data is failed");
-
-        let crc = {
-            let mut digest = crc32::Digest::new(crc32::IEEE);
-            digest.write(content);
-            digest.write(&[kind]);
-            digest.sum32()
-        };
-
-        let mut v = BytesMut::with_capacity(TRAILER_SIZE);
-        v.put_u8(kind);
-        v.put_u32::<LittleEndian>(crc);
+        let content_slice = content.as_ref();
         self.writer
-            .write(&v.freeze())
+            .write(content_slice)
             .expect("Writing data is failed");
 
-        BlockHandle::from(content.len() as u64, self.writer.offset())
+        // crc
+        {
+            let crc = {
+                let mut digest = crc32::Digest::new(crc32::IEEE);
+                digest.write(content_slice);
+                digest.write(&[kind]);
+                digest.sum32()
+            };
+
+            let mut v = Slice::with_capacity(TRAILER_SIZE);
+            v.put_u8(kind);
+            v.put_u32(crc);
+            self.writer
+                .write(v.as_ref())
+                .expect("Writing data is failed");
+        }
+
+        BlockHandle::from((TRAILER_SIZE + content.len()) as u64, self.writer.offset())
     }
 }

@@ -1,5 +1,4 @@
-use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
-use slice::SliceMut;
+use slice::Slice;
 // TABLE_MAGIC_NUMBER was picked by running
 //    echo http://code.google.com/p/leveldb/ | sha1sum
 // and taking the leading 64 bits.
@@ -10,8 +9,6 @@ pub struct BlockHandle {
     pub size: Option<u64>, // varint64?
     pub offset: Option<u64>,
 }
-
-const U64_BYTE_SIZE: usize = 8;
 
 impl BlockHandle {
     pub fn new() -> Self {
@@ -28,21 +25,9 @@ impl BlockHandle {
         }
     }
 
-    pub fn decode_from(input: Bytes) -> Self {
-        let mut i_offset = 0;
-
-        let size = Some({
-            let buf = input.slice(i_offset, U64_BYTE_SIZE);
-            i_offset += U64_BYTE_SIZE;
-            LittleEndian::read_u64(&buf)
-        });
-
-        let offset = Some({
-            let buf = input.slice(i_offset, U64_BYTE_SIZE);
-            i_offset += U64_BYTE_SIZE;
-            LittleEndian::read_u64(&buf)
-        });
-
+    pub fn decode_from(input: &mut Slice) -> Self {
+        let size = input.read_u64();
+        let offset = input.read_u64();
         Self { size, offset }
     }
 
@@ -54,8 +39,8 @@ impl BlockHandle {
         self.offset = Some(v)
     }
 
-    pub fn encode(&self) -> SliceMut {
-        let mut slice = SliceMut::with_capacity(10);
+    pub fn encode(&self) -> Slice {
+        let mut slice = Slice::with_capacity(10);
         let size = self.size.expect("size must be set");
         slice.put_u64(size);
         let offset = self.offset.expect("offset must be set");
@@ -77,8 +62,8 @@ impl Footer {
         }
     }
 
-    pub fn encode(&self) -> SliceMut {
-        let mut slice = SliceMut::with_capacity(2 * 10 + 8);
+    pub fn encode(&self) -> Slice {
+        let mut slice = Slice::with_capacity(2 * 10 + 8);
         slice.put(&self.index_block_hanel.encode());
         slice.put(&self.metaindex_block_hanel.encode());
         slice.resize(2 * 10 + 8);

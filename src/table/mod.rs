@@ -3,10 +3,11 @@ mod table_writer;
 mod block_builder;
 mod block_format;
 
-use version::{FileMetaDataBuilder, FileMetaData};
+use version::{FileMetaData, FileMetaDataBuilder};
 use memdb::MemDBIterator;
 use filename;
 use self::builder::TableBuilder;
+use slice::Slice;
 // use self::block_format;
 
 enum Compression {
@@ -29,8 +30,11 @@ pub fn bulid(
             meta_builder.smallest(k.clone());
         }
 
-        builder.add(&k, &v);
-        meta_builder.largest(k); // must clone
+        meta_builder.largest(k.clone()); // must clone
+
+        let mut s = Slice::from(&k);
+        let v = Slice::from(&v);
+        builder.add(&mut s, &v);
     }
 
     builder.build();

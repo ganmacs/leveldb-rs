@@ -1,5 +1,4 @@
 use std::io;
-use bytes::Bytes;
 
 pub struct TableWriter<T: io::Write> {
     inner: T,
@@ -14,7 +13,7 @@ impl<T: io::Write> TableWriter<T> {
         }
     }
 
-    pub fn write(&mut self, content: &Bytes) -> Result<usize, io::Error> {
+    pub fn write(&mut self, content: &[u8]) -> Result<usize, io::Error> {
         self.offset += content.len();
         self.inner.write(content)
     }
