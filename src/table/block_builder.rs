@@ -36,7 +36,7 @@ impl BlockBuilder {
         }
     }
 
-    pub fn current_size_estimate(&self) -> usize {
+    pub fn estimated_current_size(&self) -> usize {
         self.buff.len() + (U32_ADDR_SIZE * (1 + self.restarts.len()))
     }
 
@@ -122,7 +122,7 @@ mod tests {
             );
         }
 
-        let s = bb.current_size_estimate() - (U32_ADDR_SIZE);
+        let s = bb.estimated_current_size() - (U32_ADDR_SIZE);
         bb.add(&Slice::from(b"key16"), &Slice::from(b"v"));
         bb.add(&Slice::from(b"key17"), &Slice::from(b"v"));
 

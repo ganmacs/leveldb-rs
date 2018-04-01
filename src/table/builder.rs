@@ -48,6 +48,11 @@ impl TableBuilder {
 
         self.data_block.add(key, value);
         self.last_key = key.clone();
+
+        // FIX: 1024
+        if self.data_block.estimated_current_size() >= 1024 {
+            self.build()
+        }
     }
 
     pub fn build(&mut self) {
