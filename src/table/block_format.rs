@@ -6,7 +6,7 @@ use slice::Slice;
 const TABLE_MAGIC_NUMBER: i64 = 0xdb4775248b80fb57;
 
 pub struct BlockHandle {
-    pub size: Option<u64>, // varint64?
+    pub size: Option<u64>,
     pub offset: Option<u64>,
 }
 
@@ -40,7 +40,8 @@ impl BlockHandle {
     }
 
     pub fn encode(&self) -> Slice {
-        let mut slice = Slice::with_capacity(10);
+        let mut slice = Slice::with_capacity(16);
+        // TODO: put num as varint64 to reduce size
         let size = self.size.expect("size must be set");
         slice.put_u64(size);
         let offset = self.offset.expect("offset must be set");
@@ -66,8 +67,27 @@ impl Footer {
         let mut slice = Slice::with_capacity(2 * 10 + 8);
         slice.put(&self.index_block_hanel.encode());
         slice.put(&self.metaindex_block_hanel.encode());
-        slice.resize(2 * 10 + 8);
         slice.put_i64(TABLE_MAGIC_NUMBER);
         slice
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BlockHandle;
+
+    #[test]
+    fn block_handle_test() {
+        let mut bh = BlockHandle::new();
+        bh.set_size(10);
+        bh.set_offset(10);
+        let v: Vec<u8> = vec![10, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0];
+        assert_eq!(bh.encode().as_ref(), v.as_ref() as &[u8]);
+
+        let mut bh = BlockHandle::from(1111111111, 200000000000);
+        let bh2 = BlockHandle::decode_from(&mut bh.encode());
+
+        assert_eq!(bh2.size, Some(1111111111));
+        assert_eq!(bh2.offset, Some(200000000000));
     }
 }
