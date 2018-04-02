@@ -1,5 +1,5 @@
 use std::{cmp, ops, ptr, u8};
-use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
+use bytes::{BufMut, ByteOrder, Bytes, LittleEndian};
 
 const U64_BYTE_SIZE: usize = 8;
 const U32_BYTE_SIZE: usize = 4;
