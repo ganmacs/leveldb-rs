@@ -64,7 +64,7 @@ impl Footer {
     }
 
     pub fn encode(&self) -> Slice {
-        let mut slice = Slice::with_capacity(2 * 10 + 8);
+        let mut slice = Slice::with_capacity(2 * 8 + 8);
         slice.put(&self.index_block_hanel.encode());
         slice.put(&self.metaindex_block_hanel.encode());
         slice.put_i64(TABLE_MAGIC_NUMBER);

@@ -20,6 +20,7 @@ const TRAILER_SIZE: usize = 5;
 
 impl TableBuilder {
     pub fn new(fname: &str) -> Self {
+        debug!("Open file {:?} for table", fname);
         let fd = fs::OpenOptions::new() // add read permission?
             .write(true)
             .create(true)
@@ -51,6 +52,7 @@ impl TableBuilder {
 
         // FIX: 1024
         if self.data_block.estimated_current_size() >= 1024 {
+            debug!("Estimated size exceeds specifed size");
             self.build()
         }
     }
@@ -88,6 +90,7 @@ impl TableBuilder {
         {
             let footer = Footer::new(index_block_handle, metaindex_block_handle);
             let content = footer.encode();
+            debug!("Write footer to file. offset is {:?}", self.size());
             self.writer
                 .write(content.as_ref())
                 .expect("Writing data is failed");
@@ -95,7 +98,7 @@ impl TableBuilder {
     }
 
     pub fn size(&self) -> usize {
-        unimplemented!()
+        self.writer.offset() as usize
     }
 
     fn flush(&mut self) {
@@ -137,6 +140,11 @@ impl TableBuilder {
                 .expect("Writing data is failed");
         }
 
+        debug!(
+            "Write data to file size={:?}, offset is {:?}",
+            TRAILER_SIZE + content.len(),
+            self.size()
+        );
         BlockHandle::from((TRAILER_SIZE + content.len()) as u64, self.writer.offset())
     }
 }
