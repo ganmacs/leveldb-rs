@@ -1,16 +1,16 @@
 use std::path;
 use std::fs;
 use std::str;
-use std::io::{BufWriter, BufReader};
+use std::io::{BufReader, BufWriter};
 use bytes::Bytes;
 use env_logger;
 
 use filename;
 use ikey::InternalKey;
-use memdb::{MemDBIterator, MemDB};
+use memdb::{MemDB, MemDBIterator};
 use batch::WriteBatch;
 use log_record::{LogReader, LogWriter};
-use version::{VersionSet, VersionEdit};
+use version::{VersionEdit, VersionSet};
 use table;
 
 pub fn open(dir: &str) -> LevelDB {
@@ -98,7 +98,7 @@ impl LevelDB {
                             log_paths.push(filename::SimpleName::new(num, path))
                         }
                     }
-                    _ => (),        // nothing
+                    _ => (), // nothing
                 }
             }
         }
@@ -178,13 +178,11 @@ impl LevelDB {
                 mem.add(key_kind, &ukey, &value);
                 // TODO: memory usage is larger than buffer size
             }
-
         }
 
         if !mem.empty() {
-            self.write_level0_table(edit, &mut mem.into_iter()).expect(
-                "failed to write write level 0 table",
-            )
+            self.write_level0_table(edit, &mut mem.into_iter())
+                .expect("failed to write write level 0 table")
         }
 
         return max_seq;
