@@ -195,8 +195,13 @@ impl LevelDB {
     ) -> Result<(), &'static str> {
         debug!("Write to level0 talble");
         let num = self.versions.next_file_num();
-        edit.add_file(meta, 0);
         let meta = table::bulid(&self.dbname, mem, num)?;
+        if meta.file_size == 0 {
+            debug!("Skip adding table file to edit version, because file size is 0");
+        } else {
+            debug!("Add metadata to version edit: {:?}", meta);
+            edit.add_file(meta, 0);
+        }
         Ok(())
     }
 
