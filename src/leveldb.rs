@@ -54,6 +54,8 @@ pub struct LevelDB {
     mem: MemDB,
     imm: Option<MemDB>,
     log_nubmer: u64,
+    table_cache: table::TableCache<usize>,
+    // Should have log file?
 }
 
 impl LevelDB {
@@ -65,14 +67,20 @@ impl LevelDB {
             mem: MemDB::new(),
             imm: None,
             log_nubmer: 0,
+            table_cache: table::TableCache::new(dir),
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<Bytes> {
+    pub fn get(&mut self, key: &str) -> Option<Bytes> {
         let ikey = InternalKey::new(key, 0); // XXX use actual seq
-        self.mem.get(&ikey).or_else(|| {
-            self.imm.as_ref().and_then(|v| v.get(&ikey))
-        })
+
+        let mut cache = &mut self.table_cache;
+        self.versions.current().and_then(|v| v.get(&ikey, cache))
+
+        // self.mem
+        //     .get(&ikey)
+        //     .or_else(|| self.imm.as_ref().and_then(|v| v.get(&ikey)))
+        //     .or_else(|| self.versions.current().and_then(|v| v.get(&ikey)))
     }
 
     pub fn set(&mut self, key: &str, value: &str) {

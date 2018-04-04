@@ -3,10 +3,13 @@ use std::fs;
 use std::io::Read;
 use std::io::BufReader;
 use std::io::BufWriter;
+use bytes::Bytes;
 
 use log_record::{LogReader, LogWriter};
 use filename;
-use super::{VersionEdit, FileMetaData, CircularLinkedList};
+use ikey;
+use super::{CircularLinkedList, FileMetaData, VersionEdit};
+use table;
 
 pub struct VersionSet {
     dbname: String,
@@ -220,6 +223,42 @@ impl Version {
             files.push(Vec::new());
         }
         Self { files }
+    }
+
+    // name(cache) is correct?
+    pub fn get(
+        &self,
+        key: &ikey::InternalKey,
+        cache: &mut table::TableCache<usize>,
+    ) -> Option<Bytes> {
+        let ukey = key.user_key();
+
+        for i in 0..LEVEL {
+            let mut meta_files: Vec<&FileMetaData> = vec![];
+
+            // level0
+            if i == 0 {
+                if self.files[0].len() != 0 {
+                    for file in &self.files[0] {
+                        if ukey <= file.largest() && ukey >= file.smallest() {
+                            debug!("{:?} is found in level 0 file", ukey);
+                            meta_files.push(file);
+                        }
+                    }
+                }
+
+                meta_files.sort();
+            } else {
+
+            }
+
+            for meta in meta_files {
+                println!("{:?}", meta);
+                cache.get(meta.file_num, meta.file_size);
+            }
+        }
+
+        None
     }
 }
 

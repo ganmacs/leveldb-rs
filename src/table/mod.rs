@@ -2,6 +2,8 @@ mod builder;
 mod table_writer;
 mod block_builder;
 mod block_format;
+mod table_cache;
+mod table;
 
 use version::{FileMetaData, FileMetaDataBuilder};
 use memdb::MemDBIterator;
@@ -42,3 +44,5 @@ pub fn bulid(
     meta_builder.file_size(builder.size() as u64);
     meta_builder.build()
 }
+
+pub use self::table_cache::TableCache;
