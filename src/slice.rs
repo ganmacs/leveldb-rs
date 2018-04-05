@@ -194,6 +194,16 @@ impl Slice {
         }
     }
 
+    pub fn read_i64(&mut self) -> Option<i64> {
+        let s = self.inner.len();
+        if s >= U64_BYTE_SIZE {
+            let buf = self.split_off(U64_BYTE_SIZE);
+            Some(LittleEndian::read_i64(&buf))
+        } else {
+            None
+        }
+    }
+
     pub fn split_off(&mut self, at: usize) -> Vec<u8> {
         assert!(at <= self.inner.len(), "`at` out of bounds");
 

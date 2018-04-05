@@ -3,8 +3,10 @@ use slice::Slice;
 //    echo http://code.google.com/p/leveldb/ | sha1sum
 // and taking the leading 64 bits.
 
+pub const FOOTER_MAX_LENGTH: usize = 2 * 2 * 8 + 8;
 const TABLE_MAGIC_NUMBER: i64 = 0xdb4775248b80fb57;
 
+#[derive(Debug)]
 pub struct BlockHandle {
     pub size: Option<u64>,
     pub offset: Option<u64>,
@@ -51,22 +53,38 @@ impl BlockHandle {
 }
 
 pub struct Footer {
-    index_block_hanel: BlockHandle,
-    metaindex_block_hanel: BlockHandle,
+    index_block_handle: BlockHandle,
+    metaindex_block_handle: BlockHandle,
 }
 
 impl Footer {
     pub fn new(ibh: BlockHandle, mbh: BlockHandle) -> Self {
         Self {
-            index_block_hanel: ibh,
-            metaindex_block_hanel: mbh,
+            index_block_handle: ibh,
+            metaindex_block_handle: mbh,
         }
     }
 
+    pub fn decode(input: &[u8]) -> Self {
+        let mut slice = Slice::from(input);
+        let index_block_handle = BlockHandle::decode_from(&mut slice);
+        let metaindex_block_handle = BlockHandle::decode_from(&mut slice);
+        if let Some(magic) = slice.read_i64() {
+            if magic == TABLE_MAGIC_NUMBER {
+                return Self {
+                    index_block_handle: index_block_handle,
+                    metaindex_block_handle: metaindex_block_handle,
+                };
+            }
+        };
+
+        panic!("magic number is not correct")
+    }
+
     pub fn encode(&self) -> Slice {
-        let mut slice = Slice::with_capacity(2 * 8 + 8);
-        slice.put(&self.index_block_hanel.encode());
-        slice.put(&self.metaindex_block_hanel.encode());
+        let mut slice = Slice::with_capacity(FOOTER_MAX_LENGTH);
+        slice.put(&self.index_block_handle.encode());
+        slice.put(&self.metaindex_block_handle.encode());
         slice.put_i64(TABLE_MAGIC_NUMBER);
         slice
     }
