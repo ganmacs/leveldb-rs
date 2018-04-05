@@ -117,6 +117,9 @@ impl TableBuilder {
     }
 
     fn write_raw_block(&mut self, content: &Slice, kindt: Compression) -> BlockHandle {
+        // offset must be set before writer.write
+        let bh = BlockHandle::from((TRAILER_SIZE + content.len()) as u64, self.writer.offset());
+
         let kind = kindt as u8;
         let content_slice = content.as_ref();
         self.writer
@@ -141,10 +144,11 @@ impl TableBuilder {
         }
 
         debug!(
-            "Write data to file size={:?}, offset is {:?}",
-            TRAILER_SIZE + content.len(),
-            self.size()
+            "Write data to filesize={:?}. and offset={:?}",
+            bh.size(),
+            bh.offset()
         );
-        BlockHandle::from((TRAILER_SIZE + content.len()) as u64, self.writer.offset())
+
+        bh
     }
 }
