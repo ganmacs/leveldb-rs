@@ -8,8 +8,8 @@ const TABLE_MAGIC_NUMBER: i64 = 0xdb4775248b80fb57;
 
 #[derive(Debug)]
 pub struct BlockHandle {
-    pub size: Option<u64>,
-    pub offset: Option<u64>,
+    size: Option<u64>,
+    offset: Option<u64>,
 }
 
 impl BlockHandle {
@@ -39,6 +39,14 @@ impl BlockHandle {
 
     pub fn set_offset(&mut self, v: u64) {
         self.offset = Some(v)
+    }
+
+    pub fn offset(&self) -> u64 {
+        self.offset.expect("block handle must set offset")
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size.expect("block handle must set size")
     }
 
     pub fn encode(&self) -> Slice {
