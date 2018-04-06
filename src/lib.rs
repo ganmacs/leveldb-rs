@@ -17,6 +17,7 @@ mod filename;
 mod version;
 mod table;
 mod leveldb;
+mod slice;
 
 pub use batch::WriteBatch;
 pub use leveldb::open;

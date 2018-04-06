@@ -1,5 +1,7 @@
 mod builder;
 mod table_writer;
+mod table_reader;
+mod block;
 mod block_builder;
 mod block_format;
 mod table_cache;
@@ -14,6 +16,15 @@ use slice::Slice;
 
 enum Compression {
     No,
+}
+
+impl From<u8> for Compression {
+    fn from(v: u8) -> Self {
+        match v {
+            0 => Compression::No,
+            _ => unreachable!(),
+        }
+    }
 }
 
 pub fn bulid(

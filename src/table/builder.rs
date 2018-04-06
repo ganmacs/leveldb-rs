@@ -135,11 +135,11 @@ impl TableBuilder {
                 digest.sum32()
             };
 
-            let mut v = Slice::with_capacity(TRAILER_SIZE);
-            v.put_u8(kind);
-            v.put_u32(crc);
+            let mut trailer = Slice::with_capacity(TRAILER_SIZE);
+            trailer.put_u8(kind);
+            trailer.put_u32(crc);
             self.writer
-                .write(v.as_ref())
+                .write(trailer.as_ref())
                 .expect("Writing data is failed");
         }
 

@@ -204,6 +204,15 @@ impl Slice {
         }
     }
 
+    pub fn read(&mut self, i: usize) -> Option<Vec<u8>> {
+        let s = self.inner.len();
+        if s >= i {
+            Some(self.split_off(i))
+        } else {
+            None
+        }
+    }
+
     pub fn split_off(&mut self, at: usize) -> Vec<u8> {
         assert!(at <= self.inner.len(), "`at` out of bounds");
 

@@ -4,8 +4,13 @@ use std::io::{BufReader, Seek};
 use std::io::Read;
 
 use super::block_format::{Footer, FOOTER_MAX_LENGTH};
+use super::table_reader::TableReader;
+use super::block::Block;
+use slice::Slice;
 
-pub struct Table {}
+pub struct Table {
+    block: Block,
+}
 
 impl Table {
     pub fn open(fname: &str, file_size: u64) -> Self {
@@ -29,6 +34,11 @@ impl Table {
             .expect(&format!("Failed to read footer from {:?}", fname));
         let footer = Footer::decode(&_footer);
 
-        Self {}
+        reader.seek(io::SeekFrom::Start(0));
+        let block =
+            TableReader::read_record(&mut reader, &footer.index_block_handle).expect("block need");
+        Self { block }
     }
+
+    pub fn get(&self, key: &Slice) {}
 }

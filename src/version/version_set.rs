@@ -4,6 +4,7 @@ use std::io::Read;
 use std::io::BufReader;
 use std::io::BufWriter;
 use bytes::Bytes;
+use slice::Slice;
 
 use log_record::{LogReader, LogWriter};
 use filename;
@@ -254,7 +255,7 @@ impl Version {
 
             for meta in meta_files {
                 println!("{:?}", meta);
-                cache.get(meta.file_num, meta.file_size);
+                cache.get(&Slice::from_bytes(&ukey), meta.file_num, meta.file_size);
             }
         }
 

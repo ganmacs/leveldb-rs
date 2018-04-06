@@ -61,8 +61,8 @@ impl BlockHandle {
 }
 
 pub struct Footer {
-    index_block_handle: BlockHandle,
-    metaindex_block_handle: BlockHandle,
+    pub index_block_handle: BlockHandle,
+    pub metaindex_block_handle: BlockHandle,
 }
 
 impl Footer {
