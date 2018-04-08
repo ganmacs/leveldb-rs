@@ -23,8 +23,10 @@ impl TableReader {
         // check crc
 
         let mut cs = Slice::from(&content);
-        cs.read_u8().map(|v| match Compression::from(v) {
-            Compression::No => Block::new(cs),
-        })
+        cs.split_off(block_size)
+            .get(0)
+            .map(|v| match Compression::from(*v) {
+                Compression::No => Block::new(cs),
+            })
     }
 }
