@@ -3,6 +3,7 @@ use slice::Slice;
 use super::block_format::BlockHandle;
 use super::block::Block;
 use table::Compression;
+use super::builder::TRAILER_SIZE;
 
 pub struct TableReader {}
 
@@ -12,14 +13,7 @@ impl TableReader {
         block_handle: &BlockHandle,
     ) -> Option<Block> {
         reader.seek(io::SeekFrom::Start(block_handle.offset()));
-        let mut buff = vec![0; block_handle.size() as usize];
-
-        debug!(
-            "Read offset={:}, size={:?}",
-            block_handle.offset(),
-            block_handle.size()
-        );
-
+        let mut buff = vec![0; TRAILER_SIZE + block_handle.size() as usize];
         reader.read(&mut buff);
 
         let mut slice = Slice::from(&buff);
