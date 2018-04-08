@@ -13,13 +13,12 @@ impl TableReader {
         block_handle: &BlockHandle,
     ) -> Option<Block> {
         reader.seek(io::SeekFrom::Start(block_handle.offset()));
-        let mut buff = vec![0; TRAILER_SIZE + block_handle.size() as usize];
+        let block_size = block_handle.size() as usize;
+        let mut buff = vec![0; TRAILER_SIZE + block_size];
         reader.read(&mut buff);
 
         let mut slice = Slice::from(&buff);
-        let content = slice
-            .read(block_handle.size() as usize)
-            .expect("content is missing");
+        let content = slice.read(block_size + 1).expect("content is missing");
         let _crc = slice.read_u32().expect("invalid crc");
         // check crc
 
