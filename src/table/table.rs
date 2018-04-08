@@ -9,7 +9,7 @@ use super::block::Block;
 use slice::Slice;
 
 pub struct Table {
-    block: Block,
+    index_block: Block,
 }
 
 impl Table {
@@ -36,8 +36,8 @@ impl Table {
 
         reader.seek(io::SeekFrom::Start(0));
         let block =
-        Self { block }
             TableReader::read_block(&mut reader, &footer.index_block_handle).expect("block need");
+        Self { index_block: block }
     }
 
     pub fn get(&self, key: &Slice) {}
