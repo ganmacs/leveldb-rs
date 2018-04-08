@@ -36,8 +36,8 @@ impl Table {
 
         reader.seek(io::SeekFrom::Start(0));
         let block =
-            TableReader::read_record(&mut reader, &footer.index_block_handle).expect("block need");
         Self { block }
+            TableReader::read_block(&mut reader, &footer.index_block_handle).expect("block need");
     }
 
     pub fn get(&self, key: &Slice) {}

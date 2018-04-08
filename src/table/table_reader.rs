@@ -8,7 +8,7 @@ use super::builder::TRAILER_SIZE;
 pub struct TableReader {}
 
 impl TableReader {
-    pub fn read_record<T: io::Read + io::Seek>(
+    pub fn read_block<T: io::Read + io::Seek>(
         reader: &mut T,
         block_handle: &BlockHandle,
     ) -> Option<Block> {
