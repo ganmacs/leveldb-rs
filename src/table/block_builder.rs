@@ -30,7 +30,7 @@ impl BlockBuilder {
         Self {
             buff: Slice::with_capacity(1024),
             counter: 0,
-            restarts: vec![],
+            restarts: vec![0],
             last_key: Slice::new(),
             finished: false,
         }
