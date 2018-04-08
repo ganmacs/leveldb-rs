@@ -54,7 +54,7 @@ pub struct LevelDB {
     mem: MemDB,
     imm: Option<MemDB>,
     log_nubmer: u64,
-    table_cache: table::TableCache<usize>,
+    table_cache: table::TableCache,
     // Should have log file?
 }
 

@@ -227,11 +227,7 @@ impl Version {
     }
 
     // name(cache) is correct?
-    pub fn get(
-        &self,
-        key: &ikey::InternalKey,
-        cache: &mut table::TableCache<usize>,
-    ) -> Option<Bytes> {
+    pub fn get(&self, key: &ikey::InternalKey, cache: &mut table::TableCache) -> Option<Bytes> {
         let ukey = key.user_key();
 
         for i in 0..LEVEL {
