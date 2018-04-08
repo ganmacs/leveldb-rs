@@ -127,7 +127,7 @@ mod tests {
         bb.add(&Slice::from(b"key17"), &Slice::from(b"v"));
 
         let mut v = bb.build();
-        v.split_off(s);
+        v.split_on(s);
 
         let vv: Vec<u8> = vec![
             0, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0, 0, 107, 101, 121, 49, 54, 118, 4, 0, 0, 0, 1, 0, 0, 0,

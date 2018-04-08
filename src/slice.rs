@@ -1,10 +1,10 @@
 use std::{cmp, ops, ptr, u8};
 use bytes::{BufMut, ByteOrder, Bytes, LittleEndian};
 
-const U64_BYTE_SIZE: usize = 8;
-const U32_BYTE_SIZE: usize = 4;
-const U16_BYTE_SIZE: usize = 2;
-const U8_BYTE_SIZE: usize = 1;
+pub const U64_BYTE_SIZE: usize = 8;
+pub const U32_BYTE_SIZE: usize = 4;
+pub const U16_BYTE_SIZE: usize = 2;
+pub const U8_BYTE_SIZE: usize = 1;
 
 pub fn short_successor(v: &mut Slice) {
     let l = v.len();
@@ -158,7 +158,7 @@ impl Slice {
 
     pub fn read_u8(&mut self) -> Option<u8> {
         if self.inner.len() >= U8_BYTE_SIZE {
-            let buf = self.split_off(U8_BYTE_SIZE);
+            let buf = self.split_on(U8_BYTE_SIZE);
             Some(buf[0])
         } else {
             None
@@ -167,7 +167,7 @@ impl Slice {
 
     pub fn read_u16(&mut self) -> Option<u16> {
         if self.inner.len() >= U16_BYTE_SIZE {
-            let buf = self.split_off(U16_BYTE_SIZE);
+            let buf = self.split_on(U16_BYTE_SIZE);
             Some(LittleEndian::read_u16(&buf))
         } else {
             None
@@ -177,7 +177,7 @@ impl Slice {
     pub fn read_u32(&mut self) -> Option<u32> {
         let s = self.inner.len();
         if s >= U32_BYTE_SIZE {
-            let buf = self.split_off(U32_BYTE_SIZE);
+            let buf = self.split_on(U32_BYTE_SIZE);
             Some(LittleEndian::read_u32(&buf))
         } else {
             None
@@ -187,7 +187,7 @@ impl Slice {
     pub fn read_u64(&mut self) -> Option<u64> {
         let s = self.inner.len();
         if s >= U64_BYTE_SIZE {
-            let buf = self.split_off(U64_BYTE_SIZE);
+            let buf = self.split_on(U64_BYTE_SIZE);
             Some(LittleEndian::read_u64(&buf))
         } else {
             None
@@ -197,7 +197,7 @@ impl Slice {
     pub fn read_i64(&mut self) -> Option<i64> {
         let s = self.inner.len();
         if s >= U64_BYTE_SIZE {
-            let buf = self.split_off(U64_BYTE_SIZE);
+            let buf = self.split_on(U64_BYTE_SIZE);
             Some(LittleEndian::read_i64(&buf))
         } else {
             None
@@ -207,13 +207,17 @@ impl Slice {
     pub fn read(&mut self, i: usize) -> Option<Vec<u8>> {
         let s = self.inner.len();
         if s >= i {
-            Some(self.split_off(i))
+            Some(self.split_on(i))
         } else {
             None
         }
     }
 
     pub fn split_off(&mut self, at: usize) -> Vec<u8> {
+        self.inner.split_off(at)
+    }
+
+    pub fn split_on(&mut self, at: usize) -> Vec<u8> {
         assert!(at <= self.inner.len(), "`at` out of bounds");
 
         let other_len = self.inner.len() - at;
