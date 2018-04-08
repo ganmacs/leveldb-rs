@@ -109,7 +109,7 @@ impl Slice {
 
     pub fn get_u16(&self, offset: usize) -> Option<u16> {
         let lim = offset + U16_BYTE_SIZE;
-        if self.inner.len() > lim {
+        if self.inner.len() >= lim {
             let mut buf = [0; U16_BYTE_SIZE];
             buf.copy_from_slice(&self.inner[offset..lim]);
             Some(LittleEndian::read_u16(&buf))
@@ -120,7 +120,7 @@ impl Slice {
 
     pub fn get_u32(&self, offset: usize) -> Option<u32> {
         let lim = offset + U32_BYTE_SIZE;
-        if self.inner.len() > lim {
+        if self.inner.len() >= lim {
             let mut buf = [0; U32_BYTE_SIZE];
             buf.copy_from_slice(&self.inner[offset..lim]);
             Some(LittleEndian::read_u32(&buf))
@@ -131,7 +131,7 @@ impl Slice {
 
     pub fn get_u64(&self, offset: usize) -> Option<u64> {
         let lim = offset + U64_BYTE_SIZE;
-        if self.inner.len() > lim {
+        if self.inner.len() >= lim {
             let mut buf = [0; U64_BYTE_SIZE];
             buf.copy_from_slice(&self.inner[offset..lim]);
             Some(LittleEndian::read_u64(&buf))
