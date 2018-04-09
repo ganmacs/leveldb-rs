@@ -70,6 +70,11 @@ impl TableBuilder {
                 // TODO: write filter block
             }
             let content = meta_index_block.build();
+            debug!(
+                "Write metaindex block handle offset={:?}, size={:?}",
+                self.writer.offset(),
+                content.len(),
+            );
             self.write_block(&content)
         };
 
@@ -83,6 +88,11 @@ impl TableBuilder {
                 self.pending_index_entry = false;
             }
             let content = self.index_block.build();
+            debug!(
+                "Write index block handle offset={:?}, size={:?}",
+                self.writer.offset(),
+                content.len(),
+            );
             self.write_block(&content)
         };
 
@@ -107,6 +117,11 @@ impl TableBuilder {
         }
 
         let content = self.data_block.build();
+        debug!(
+            "Flush data offset={:?}, size={:?}",
+            self.writer.offset(),
+            content.len(),
+        );
         self.pending_handle = self.write_block(&content);
         self.pending_index_entry = true;
     }
@@ -142,12 +157,6 @@ impl TableBuilder {
                 .write(trailer.as_ref())
                 .expect("Writing data is failed");
         }
-
-        debug!(
-            "Write data to filesize={:?}. and offset={:?}",
-            bh.size(),
-            bh.offset()
-        );
 
         bh
     }

@@ -35,6 +35,13 @@ impl Table {
         let footer = Footer::decode(&_footer);
 
         reader.seek(io::SeekFrom::Start(0));
+        debug!(
+            "Read footer data index_block(offset={:?}, size={:?}), metaindex(offset={:?}, size={:?})",
+            footer.index_block_handle.offset(),
+            footer.index_block_handle.size(),
+            footer.metaindex_block_handle.offset(),
+            footer.metaindex_block_handle.size()
+        );
         let block =
             TableReader::read_block(&mut reader, &footer.index_block_handle).expect("block need");
         Self { index_block: block }

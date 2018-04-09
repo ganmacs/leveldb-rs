@@ -14,6 +14,7 @@ impl<T: io::Write> TableWriter<T> {
     }
 
     pub fn write(&mut self, content: &[u8]) -> Result<usize, io::Error> {
+        debug!("write data to table {:?}", content);
         self.offset += content.len();
         self.inner.write(content)
     }
