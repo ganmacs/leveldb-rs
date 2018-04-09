@@ -1,6 +1,6 @@
 use rand;
 use rand::Rng;
-use bytes::{Bytes, BytesMut, BufMut, LittleEndian, ByteOrder};
+use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
 use super::MAX_HEIGHT;
 
 type Key = Bytes;
@@ -150,7 +150,9 @@ struct IndexBuilder {
 
 impl IndexBuilder {
     pub fn new() -> Self {
-        IndexBuilder { inner: [HEAD as u16; 14] }
+        IndexBuilder {
+            inner: [HEAD as u16; 14],
+        }
     }
 
     pub fn key(&mut self, v: u16) -> &Self {
@@ -180,7 +182,9 @@ struct SkipIndex {
 
 impl SkipIndex {
     pub fn with_capacity(cap: usize) -> Self {
-        let mut skip = SkipIndex { inner: Vec::with_capacity(cap) };
+        let mut skip = SkipIndex {
+            inner: Vec::with_capacity(cap),
+        };
         skip.extend_from_slice(&IndexBuilder::new().build());
         skip
     }
@@ -239,7 +243,6 @@ impl Iterator for SkipListIterator {
     }
 }
 
-
 impl SkipListIterator {
     fn next_0(&self) -> usize {
         self.idx.next(self.pos)
@@ -269,7 +272,7 @@ impl IntoIterator for SkipList {
 
 #[cfg(test)]
 mod tests {
-    use super::{SkipList, Bytes};
+    use super::{Bytes, SkipList};
 
     #[test]
     fn test_skiplist() {
@@ -308,7 +311,6 @@ mod tests {
         for i in 0..size {
             assert!(list.get(&Bytes::from(format!("key{}", i))).is_some());
         }
-
     }
 
     #[test]

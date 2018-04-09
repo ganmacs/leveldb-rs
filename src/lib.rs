@@ -2,12 +2,13 @@ extern crate bytes;
 extern crate crc;
 extern crate rand;
 extern crate regex;
+
 #[macro_use]
 extern crate lazy_static;
 
+extern crate env_logger;
 #[macro_use]
 extern crate log;
-extern crate env_logger;
 
 mod log_record;
 mod batch;

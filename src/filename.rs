@@ -77,19 +77,19 @@ pub fn set_current_file(dbname: &str, num: usize) {
 impl<'a> FileType<'a> {
     pub fn parse_name(filename: &'a str) -> Self {
         if CURRENT_FILE_REGEX.is_match(filename) {
-            let v = CURRENT_FILE_REGEX.captures(filename).expect(
-                "current file regex",
-            );
-            let name = v.get(1).map(|v| v.as_str()).expect(
-                "current file regex name",
-            );
+            let v = CURRENT_FILE_REGEX
+                .captures(filename)
+                .expect("current file regex");
+            let name = v.get(1)
+                .map(|v| v.as_str())
+                .expect("current file regex name");
             FileType::Current(name)
         } else if LOG_FILE_REGEX.is_match(filename) {
             if let Some(v) = LOG_FILE_REGEX.captures(filename) {
                 let name = v.get(1).map(|v| v.as_str()).expect("log file regex name");
-                let num = v.get(2).and_then(|v| v.as_str().parse().ok()).expect(
-                    "log file regex num",
-                );
+                let num = v.get(2)
+                    .and_then(|v| v.as_str().parse().ok())
+                    .expect("log file regex num");
                 FileType::Log(name, num)
             } else {
                 panic!("log file name is invalid")
@@ -97,21 +97,21 @@ impl<'a> FileType<'a> {
         } else if TABLE_FILE_REGEX.is_match(filename) {
             if let Some(v) = TABLE_FILE_REGEX.captures(filename) {
                 let name = v.get(1).map(|v| v.as_str()).expect("table file regex name");
-                let num = v.get(2).and_then(|v| v.as_str().parse().ok()).expect(
-                    "log file regex num",
-                );
+                let num = v.get(2)
+                    .and_then(|v| v.as_str().parse().ok())
+                    .expect("log file regex num");
                 FileType::Table(name, num)
             } else {
                 panic!("table file name is invalid")
             }
         } else if MANIFEST_FILE_REGEX.is_match(filename) {
             if let Some(v) = MANIFEST_FILE_REGEX.captures(filename) {
-                let name = v.get(1).map(|v| v.as_str()).expect(
-                    "manifest file regex name",
-                );
-                let num = v.get(2).and_then(|v| v.as_str().parse().ok()).expect(
-                    "manifest file regex num",
-                );
+                let name = v.get(1)
+                    .map(|v| v.as_str())
+                    .expect("manifest file regex name");
+                let num = v.get(2)
+                    .and_then(|v| v.as_str().parse().ok())
+                    .expect("manifest file regex num");
                 FileType::Manifest(name, num)
             } else {
                 panic!("manifest file name is invalid")
@@ -126,7 +126,6 @@ impl<'a> FileType<'a> {
             &FileType::Log(_, _) => true,
             _ => false,
         }
-
     }
 
     pub fn filename(&self) -> String {

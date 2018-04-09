@@ -1,7 +1,7 @@
 mod log_writer;
 mod log_reader;
 
-use crc::{crc32, Hasher32};
+use crc::{Hasher32, crc32};
 pub use self::log_reader::LogReader;
 pub use self::log_writer::LogWriter;
 

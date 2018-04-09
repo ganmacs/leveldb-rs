@@ -1,6 +1,5 @@
 use std::ptr;
 
-
 type Link<T> = Box<Node<T>>;
 
 pub struct CircularLinkedList<T> {
@@ -89,4 +88,3 @@ impl<T> CircularLinkedList<T> {
         Iter { head: r, next: &v }
     }
 }
-

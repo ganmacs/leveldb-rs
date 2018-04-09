@@ -1,4 +1,4 @@
-use bytes::{Bytes, BufMut, BytesMut, LittleEndian, ByteOrder};
+use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
 use log_record::LogWriter;
 use std::io::Write;
 use super::{FileMetaData, BLOCK_SIZE};

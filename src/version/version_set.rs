@@ -51,7 +51,6 @@ impl VersionSet {
             self.create_manifest_file();
         }
 
-
         if edit.log_number == 0 {
             edit.log_number = self.log_number
         }
@@ -118,9 +117,8 @@ impl VersionSet {
         let current = filename::FileType::Current(&self.dbname).filename();
         let mut fs = fs::File::open(current).expect("fail to open current file");
         let mut name = String::new();
-        fs.read_to_string(&mut name).expect(
-            "failed to read current file content",
-        );
+        fs.read_to_string(&mut name)
+            .expect("failed to read current file content");
 
         let n = format!("{:}/{:}", &self.dbname, name);
         debug!("Load current manifest file {:?}", name);
@@ -180,7 +178,6 @@ impl VersionSet {
         );
 
         debug!("recoverd current version");
-
     }
 
     pub fn mark_file_num_used(&mut self, num: u64) {

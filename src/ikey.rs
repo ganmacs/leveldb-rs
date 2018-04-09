@@ -1,4 +1,4 @@
-use bytes::{BytesMut, Bytes, BufMut, LittleEndian, ByteOrder};
+use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
 
 pub struct InternalKey {
     inner: Bytes,
@@ -20,7 +20,9 @@ impl InternalKey {
         bytes.put_u64::<LittleEndian>(seq);
         bytes.put_u64::<LittleEndian>(seq);
 
-        InternalKey { inner: bytes.freeze() }
+        InternalKey {
+            inner: bytes.freeze(),
+        }
     }
 
     pub fn user_key(&self) -> Bytes {

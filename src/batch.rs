@@ -1,6 +1,6 @@
-use bytes::{BufMut, BytesMut, Bytes, LittleEndian, ByteOrder};
+use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
 // use memdb::MemDB;
-use std::iter::{Iterator, IntoIterator};
+use std::iter::{IntoIterator, Iterator};
 
 const COUNT_INDEX: usize = 8;
 const RECORD_INDEX: usize = 12;

@@ -1,6 +1,6 @@
 use std::io::Read;
-use bytes::{Bytes, LittleEndian, ByteOrder, BytesMut};
-use super::{RecordType, BLOCK_SIZE, HEADER_SIZE, LENGTH_SIZE, TYPE_SIZE, CHECKSUM_SIZE, crc32};
+use bytes::{ByteOrder, Bytes, BytesMut, LittleEndian};
+use super::{RecordType, crc32, BLOCK_SIZE, CHECKSUM_SIZE, HEADER_SIZE, LENGTH_SIZE, TYPE_SIZE};
 use std::iter::Iterator;
 
 pub struct LogReader<T: Read> {
@@ -18,9 +18,8 @@ impl<T: Read> LogReader<T> {
 
     pub fn read_record(&mut self) -> Option<Bytes> {
         let mut slice = Bytes::with_capacity(BLOCK_SIZE);
-        let record_type = self.read_physical_record(&mut slice).expect(
-            "invalid record type",
-        );
+        let record_type = self.read_physical_record(&mut slice)
+            .expect("invalid record type");
 
         // TODO fragment
         let record = match record_type {
@@ -72,9 +71,7 @@ impl<T: Read> LogReader<T> {
 
         debug!(
             "length={:?}, rtype={:?}, record={:?}",
-            length,
-            rtype,
-            record
+            length, rtype, record
         );
 
         ret.extend(record);

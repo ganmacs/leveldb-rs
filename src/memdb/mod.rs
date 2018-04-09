@@ -1,12 +1,12 @@
 extern crate bytes;
 extern crate rand;
 
-use std::iter::{Iterator, IntoIterator};
+use std::iter::{IntoIterator, Iterator};
 use batch::KeyKind;
 mod skiplist;
 
 pub use ikey::InternalKey;
-pub use bytes::{Bytes, LittleEndian, ByteOrder};
+pub use bytes::{ByteOrder, Bytes, LittleEndian};
 
 const MAX_HEIGHT: usize = 12;
 
@@ -16,7 +16,9 @@ pub struct MemDB {
 
 impl MemDB {
     pub fn new() -> Self {
-        MemDB { inner: skiplist::SkipList::new() }
+        MemDB {
+            inner: skiplist::SkipList::new(),
+        }
     }
 
     pub fn empty(&self) -> bool {
@@ -39,7 +41,7 @@ impl MemDB {
 
         match key_kind {
             KeyKind::SET => self.inner.insert(ukey, &value),
-            KeyKind::DELETE => (),    // TODO
+            KeyKind::DELETE => (), // TODO
         };
     }
 }
@@ -49,7 +51,9 @@ impl IntoIterator for MemDB {
     type IntoIter = MemDBIterator;
 
     fn into_iter(self) -> Self::IntoIter {
-        MemDBIterator { inner: self.inner.into_iter() }
+        MemDBIterator {
+            inner: self.inner.into_iter(),
+        }
     }
 }
 
@@ -67,7 +71,7 @@ impl Iterator for MemDBIterator {
 
 #[cfg(test)]
 mod tests {
-    use super::{MemDB, Bytes, InternalKey, KeyKind};
+    use super::{Bytes, InternalKey, KeyKind, MemDB};
 
     #[test]
     fn test_skiplist() {
@@ -92,7 +96,6 @@ mod tests {
         assert_eq!(db.get(&InternalKey::new("notfound", 0)), None);
     }
 
-
     #[test]
     fn test_skiplist_iter() {
         let mut db = MemDB::new();
@@ -116,6 +119,5 @@ mod tests {
         for v in hash.into_iter() {
             assert_eq!(it.next().unwrap(), (Bytes::from(v.0), v.1));
         }
-
     }
 }
