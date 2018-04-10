@@ -47,5 +47,12 @@ impl Table {
         Self { index_block: block }
     }
 
-    pub fn get(&self, key: &Slice) {}
+    pub fn get(&mut self, key: &Slice) -> Option<Slice> {
+        if let Some(index_value) = self.index_block.iter().seek(key) {
+            debug!("{:?}", index_value);
+            Some(Slice::new())
+        } else {
+            None
+        }
+    }
 }

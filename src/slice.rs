@@ -140,6 +140,17 @@ impl Slice {
         }
     }
 
+    pub fn get(&self, offset: usize, size: usize) -> Option<Vec<u8>> {
+        let lim = offset + size;
+        if self.inner.len() >= lim {
+            let mut buf = vec![0; size];
+            buf.copy_from_slice(&self.inner[offset..lim]);
+            Some(buf)
+        } else {
+            None
+        }
+    }
+
     pub fn resize(&mut self, size: usize) {
         self.inner.resize(size, 0)
     }

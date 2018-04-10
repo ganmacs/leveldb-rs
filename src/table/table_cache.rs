@@ -23,12 +23,12 @@ impl TableCache {
 
     pub fn get(&mut self, key: &Slice, file_number: u64, size: u64) -> Slice {
         let table = self.find_or_create_table(file_number, size);
-        table.get(key)
+        table.get(key).expect("XXX")
     }
 
-    pub fn find_or_create_table(&mut self, file_number: u64, size: u64) -> &Table {
+    pub fn find_or_create_table(&mut self, file_number: u64, size: u64) -> &mut Table {
         let db_name = &self.db_name;
-        &self.cache
+        &mut self.cache
             .entry(file_number)
             .or_insert_with(|| {
                 let name = filename::FileType::Table(db_name, file_number).filename();
