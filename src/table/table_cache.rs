@@ -21,9 +21,9 @@ impl TableCache {
         }
     }
 
-    pub fn get(&mut self, key: &Slice, file_number: u64, size: u64) -> Slice {
+    pub fn get(&mut self, key: &Slice, file_number: u64, size: u64) -> Option<Slice> {
         let table = self.find_or_create_table(file_number, size);
-        table.get(key).expect("XXX")
+        table.get(key)
     }
 
     pub fn find_or_create_table(&mut self, file_number: u64, size: u64) -> &mut Table {

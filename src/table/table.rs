@@ -5,11 +5,12 @@ use std::io::Read;
 
 use super::block_format::{Footer, FOOTER_MAX_LENGTH};
 use super::table_reader::TableReader;
-use super::block::Block;
+use super::{block::Block, block_reader::BlockReader};
 use slice::Slice;
 
 pub struct Table {
     index_block: Block,
+    reader: BufReader<fs::File>,
 }
 
 impl Table {
@@ -42,15 +43,18 @@ impl Table {
             footer.metaindex_block_handle.offset(),
             footer.metaindex_block_handle.size()
         );
-        let block =
+        let index_block =
             TableReader::read_block(&mut reader, &footer.index_block_handle).expect("block need");
-        Self { index_block: block }
+        Self {
+            index_block: index_block,
+            reader: reader,
+        }
     }
 
     pub fn get(&mut self, key: &Slice) -> Option<Slice> {
         if let Some(index_value) = self.index_block.iter().seek(key) {
-            debug!("{:?}", index_value);
-            Some(Slice::new())
+            let mut block = BlockReader::new(&mut self.reader, &mut index_value.clone()); // XXX
+            block.iter().seek(key)
         } else {
             None
         }

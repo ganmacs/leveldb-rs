@@ -245,8 +245,10 @@ impl Version {
             }
 
             for meta in meta_files {
-                println!("{:?}", meta);
-                cache.get(&Slice::from_bytes(&ukey), meta.file_num, meta.file_size);
+                let v = cache.get(&Slice::from_bytes(&ukey), meta.file_num, meta.file_size);
+                if v.is_some() {
+                    return v.map(|v| v.to_bytes());
+                }
             }
         }
 
