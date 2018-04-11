@@ -216,11 +216,9 @@ pub struct Version {
 
 impl Version {
     pub fn new() -> Self {
-        let mut files = Vec::new();
-        for _ in 0..LEVEL {
-            files.push(Vec::new());
+        Self {
+            files: vec![vec![]; LEVEL],
         }
-        Self { files }
     }
 
     // name(cache) is correct?
@@ -263,14 +261,10 @@ pub struct VersionBuilder {
 
 impl VersionBuilder {
     pub fn new() -> Self {
-        let mut added = Vec::new();
-        let mut deleted = Vec::new();
-        for _ in 0..LEVEL {
-            added.push(Vec::new());
-            deleted.push(HashMap::new());
+        Self {
+            added: vec![Vec::new(); LEVEL],
+            deleted: vec![HashMap::new(); LEVEL],
         }
-
-        Self { added, deleted }
     }
 
     pub fn apply(&mut self, edit: &VersionEdit) {
