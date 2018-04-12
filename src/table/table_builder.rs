@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::BufWriter;
 use crc::{Hasher32, crc32};
-use table::{Compression, block_builder::BlockBuilder, block_format::{BlockHandle, Footer},
+use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Footer},
             table_writer::TableWriter};
 use slice::Slice;
 use slice;

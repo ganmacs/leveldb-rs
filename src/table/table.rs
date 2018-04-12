@@ -3,7 +3,7 @@ use std::io;
 use std::io::{BufReader, Seek};
 use std::io::Read;
 
-use super::block_format::{Footer, FOOTER_MAX_LENGTH};
+use super::format::{Footer, FOOTER_MAX_LENGTH};
 use super::table_reader::TableReader;
 use super::{block::Block, block_reader::BlockReader};
 use slice::Slice;

@@ -1,9 +1,9 @@
-mod builder;
+mod table_builder;
 mod table_writer;
 mod table_reader;
 mod block;
 mod block_builder;
-mod block_format;
+mod format;
 mod block_reader;
 mod table_cache;
 mod table;
