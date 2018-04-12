@@ -4,7 +4,7 @@ use std::io::{BufReader, Seek};
 use std::io::Read;
 
 use super::format::{Footer, FOOTER_MAX_LENGTH};
-use super::table_reader::TableReader;
+use super::format;
 use super::{block::Block, block_reader::BlockReader};
 use slice::Slice;
 
@@ -44,7 +44,7 @@ impl Table {
             footer.metaindex_block_handle.size()
         );
         let index_block =
-            TableReader::read_block(&mut reader, &footer.index_block_handle).expect("block need");
+            format::read_block(&mut reader, &footer.index_block_handle).expect("block need");
         Self {
             index_block: index_block,
             reader: reader,

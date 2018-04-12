@@ -1,6 +1,5 @@
 mod table_builder;
 mod table_writer;
-mod table_reader;
 mod block;
 mod block_builder;
 mod format;
@@ -11,7 +10,7 @@ mod table;
 use version::{FileMetaData, FileMetaDataBuilder};
 use memdb::MemDBIterator;
 use filename;
-use self::builder::TableBuilder;
+use self::table_builder::TableBuilder;
 use slice::Slice;
 // use self::block_format;
 
