@@ -7,6 +7,7 @@ use super::format::{Footer, FOOTER_MAX_LENGTH};
 use super::format;
 use super::{block::Block, block_reader::BlockReader};
 use slice::Slice;
+use bytes::Bytes;
 
 pub struct Table {
     index_block: Block,
@@ -51,7 +52,7 @@ impl Table {
         }
     }
 
-    pub fn get(&mut self, key: &Slice) -> Option<Slice> {
+    pub fn get(&mut self, key: &Bytes) -> Option<Slice> {
         if let Some(index_value) = self.index_block.iter().seek(key) {
             let mut block = BlockReader::new(&mut self.reader, &mut index_value.clone()); // XXX
             block.iter().seek(key)

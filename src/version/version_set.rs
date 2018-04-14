@@ -4,7 +4,6 @@ use std::io::Read;
 use std::io::BufReader;
 use std::io::BufWriter;
 use bytes::Bytes;
-use slice::Slice;
 
 use log_record::{LogReader, LogWriter};
 use filename;
@@ -245,7 +244,7 @@ impl Version {
             }
 
             for meta in meta_files {
-                let v = cache.get(&Slice::from_bytes(&ukey), meta.file_num, meta.file_size);
+                let v = cache.get(&ukey, meta.file_num, meta.file_size);
                 if v.is_some() {
                     return v.map(|v| v.to_bytes());
                 }

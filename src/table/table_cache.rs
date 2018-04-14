@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use filename;
 use super::table::Table;
-use slice::Slice;
+use bytes::Bytes;
+use slice::{Slice, Slice2};
 
 pub struct TableCache {
     cache: HashMap<u64, TableAndFile>, // TODO: use more smart cache
@@ -21,7 +22,7 @@ impl TableCache {
         }
     }
 
-    pub fn get(&mut self, key: &Slice, file_number: u64, size: u64) -> Option<Slice> {
+    pub fn get(&mut self, key: &Bytes, file_number: u64, size: u64) -> Option<Slice> {
         let table = self.find_or_create_table(file_number, size);
         table.get(key)
     }

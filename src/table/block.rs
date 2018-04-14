@@ -1,4 +1,5 @@
 use slice;
+use bytes::Bytes;
 
 #[derive(Debug)]
 pub struct Block {
@@ -70,7 +71,7 @@ impl BlockItertor {
             .map(|v| v as usize)
     }
 
-    pub fn seek(&mut self, key: &slice::Slice) -> Option<slice::Slice> {
+    pub fn seek(&mut self, key: &Bytes) -> Option<slice::Slice> {
         let mut left = 0;
         let mut right = self.restart_num - 1;
 

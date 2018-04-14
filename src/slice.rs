@@ -1,10 +1,86 @@
 use std::{cmp, ops, ptr, u8};
 use bytes::{BufMut, ByteOrder, Bytes, LittleEndian};
 
-pub const U64_BYTE_SIZE: usize = 8;
-pub const U32_BYTE_SIZE: usize = 4;
-pub const U16_BYTE_SIZE: usize = 2;
-pub const U8_BYTE_SIZE: usize = 1;
+use std::mem;
+use bytes::BytesMut;
+
+pub type Slice2 = BytesMut;
+
+pub const U64_BYTE_SIZE: usize = mem::size_of::<u64>();
+pub const U32_BYTE_SIZE: usize = mem::size_of::<u32>();
+pub const U16_BYTE_SIZE: usize = mem::size_of::<u16>();
+pub const U8_BYTE_SIZE: usize = mem::size_of::<u8>();
+
+pub mod sop {
+    use super::*;
+    use bytes::{BufMut, ByteOrder, LittleEndian};
+
+    pub fn put_u8(s: &mut Slice2, n: u8) {
+        s.put_u8(n);
+    }
+
+    pub fn put_u16(s: &mut Slice2, n: u16) {
+        s.put_u16::<LittleEndian>(n);
+    }
+
+    pub fn put_u32(s: &mut Slice2, n: u32) {
+        s.put_u32::<LittleEndian>(n);
+    }
+
+    pub fn put_u64(s: &mut Slice2, n: u64) {
+        s.put_u64::<LittleEndian>(n);
+    }
+
+    pub fn put_i64(s: &mut Slice2, n: i64) {
+        s.put_i64::<LittleEndian>(n);
+    }
+
+    pub fn put_str(s: &mut Slice2, n: &str) {
+        s.extend_from_slice(n.as_bytes());
+    }
+
+    pub fn put_slice(s: &mut Slice2, n: &[u8]) {
+        s.extend_from_slice(n);
+    }
+
+    pub fn get_u8<'a>(s: &Slice2, offset: usize) -> u8 {
+        s[offset]
+    }
+
+    pub fn get_u16(s: &Slice2, offset: usize) -> u16 {
+        let buf = &s[offset..offset + U16_BYTE_SIZE];
+        LittleEndian::read_u16(buf)
+    }
+
+    pub fn get_u32(s: &Slice2, offset: usize) -> u32 {
+        let buf = &s[offset..offset + U32_BYTE_SIZE];
+        LittleEndian::read_u32(buf)
+    }
+
+    pub fn get_u64(s: &Slice2, offset: usize) -> u64 {
+        let buf = &s[offset..offset + U64_BYTE_SIZE];
+        LittleEndian::read_u64(buf)
+    }
+
+    pub fn read_u8(s: &mut Slice2) -> u8 {
+        s.split_to(U8_BYTE_SIZE)[0]
+    }
+
+    pub fn read_u16(s: &mut Slice2) -> u16 {
+        let buf = &s.split_to(U16_BYTE_SIZE)[0..U16_BYTE_SIZE];
+        LittleEndian::read_u16(buf)
+    }
+
+    pub fn read_u32(s: &mut Slice2) -> u32 {
+        let buf = &s.split_to(U32_BYTE_SIZE)[0..U32_BYTE_SIZE];
+        LittleEndian::read_u32(buf)
+    }
+
+    pub fn read_u64(s: &mut Slice2) -> u64 {
+        let buf = &s.split_to(U64_BYTE_SIZE)[0..U64_BYTE_SIZE];
+        LittleEndian::read_u64(buf)
+    }
+}
 
 pub fn short_successor(v: &mut Slice) {
     let l = v.len();
