@@ -33,7 +33,7 @@ impl MemDB {
         self.inner.get(&v)
     }
 
-    pub fn add(&mut self, key_kind: KeyKind, ukey: &Bytes, value: &Bytes) {
+    pub fn add(&mut self, seq: u64, key_kind: KeyKind, ukey: &Bytes, value: &Bytes) {
         let n = ukey.len();
         let mut buf = [0; 4];
         LittleEndian::write_u32(&mut buf, n as u32);
@@ -113,7 +113,7 @@ mod tests {
         ];
 
         for v in &hash.clone() {
-            db.add(KeyKind::SET, &Bytes::from(v.0), &v.1);
+            db.add(0, KeyKind::SET, &Bytes::from(v.0), &v.1);
         }
 
         let mut it = db.into_iter();

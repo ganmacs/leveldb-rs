@@ -176,15 +176,16 @@ impl LevelDB {
         for r in reader.into_iter() {
             let batch = WriteBatch::load_data(r);
 
-            let num_seq = batch.seq() + batch.count();
+            let nseq = batch.seq();
+            let num_seq = nseq + batch.count();
             if max_seq < num_seq {
                 max_seq = num_seq;
             }
 
-            for (key_kind, ukey, value) in batch.into_iter() {
-                debug!("Add data to memdb key={:?}, value={:?}", ukey, value);
-                mem.add(key_kind, &ukey, &value);
-                // TODO: memory usage is larger than buffer size
+            let mut iter = batch.into_iter();
+            for i in nseq..num_seq {
+                let (key_kind, ukey, value) = iter.next().expect("batch size is invalid");
+                mem.add(i as u64, key_kind, &ukey, &value);
             }
         }
 
@@ -213,11 +214,15 @@ impl LevelDB {
         Ok(())
     }
 
-    pub fn apply(&mut self, batch: WriteBatch) {
+    pub fn apply(&mut self, mut batch: WriteBatch) {
+        let seq = self.versions.last_sequence + 1;
+        batch.set_seq(seq);
+        self.versions.set_last_sequence(seq);
+
         self.log.as_mut().map(|l| l.add_record(batch.data()));
 
         for (key_kind, ukey, value) in batch.into_iter() {
-            self.mem.add(key_kind, &ukey, &value);
+            self.mem.add(seq, key_kind, &ukey, &value);
         }
     }
 }

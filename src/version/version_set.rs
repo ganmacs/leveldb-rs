@@ -203,6 +203,10 @@ impl VersionSet {
 
         return vec;
     }
+
+    pub fn set_last_sequence(&mut self, v: u64) {
+        self.last_sequence = v;
+    }
 }
 
 const LEVEL: usize = 12;

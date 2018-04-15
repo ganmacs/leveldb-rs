@@ -88,6 +88,10 @@ impl WriteBatch {
     pub fn seq(&self) -> usize {
         self.seq as usize
     }
+
+    pub fn set_seq(&mut self, v: u64) {
+        self.seq = v
+    }
 }
 
 impl IntoIterator for WriteBatch {
