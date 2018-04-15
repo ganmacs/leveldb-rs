@@ -1,6 +1,7 @@
 use rand;
 use rand::Rng;
-use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
+use bytes::{BufMut, Bytes, BytesMut};
+use byteorder::{ByteOrder, LittleEndian};
 use super::MAX_HEIGHT;
 
 type Key = Bytes;
@@ -120,7 +121,7 @@ impl SkipList {
         let mut buf = BytesMut::with_capacity(len + 4);
 
         let offset = self.data.len();
-        buf.put_u64::<LittleEndian>(len as u64);
+        buf.put_u64_le(len as u64);
         buf.put_slice(v);
 
         self.data.extend(buf);

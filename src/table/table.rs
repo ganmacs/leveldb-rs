@@ -4,10 +4,9 @@ use std::io::{BufReader, Seek};
 use std::io::Read;
 
 use super::format::{Footer, FOOTER_MAX_LENGTH};
-use super::format;
-use super::{block::Block, block_reader::BlockReader};
-use slice::Slice;
-use bytes::Bytes;
+use super::{block, format};
+use super::block::Block;
+use slice::Bytes;
 
 pub struct Table {
     index_block: Block,
@@ -52,10 +51,10 @@ impl Table {
         }
     }
 
-    pub fn get(&mut self, key: &Bytes) -> Option<Slice> {
+    pub fn get(&mut self, key: &Bytes) -> Option<Bytes> {
         if let Some(index_value) = self.index_block.iter().seek(key) {
-            let mut block = BlockReader::new(&mut self.reader, &mut index_value.clone()); // XXX
-            block.iter().seek(key)
+            let mut b = block::read(&mut self.reader, &mut index_value.clone()); // XXX
+            b.iter().seek(key)
         } else {
             None
         }

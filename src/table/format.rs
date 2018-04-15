@@ -1,5 +1,5 @@
 use std::io;
-use slice::Slice;
+use slice::{ByteRead, ByteWrite, Bytes, BytesMut};
 use super::{Compression, block::Block};
 use super::table_builder::TRAILER_SIZE;
 
@@ -31,9 +31,9 @@ impl BlockHandle {
         }
     }
 
-    pub fn decode_from(input: &mut Slice) -> Self {
-        let size = input.read_u64();
-        let offset = input.read_u64();
+    pub fn decode_from(input: &mut Bytes) -> Self {
+        let size = Some(input.read_u64());
+        let offset = Some(input.read_u64());
         Self { size, offset }
     }
 
@@ -53,14 +53,14 @@ impl BlockHandle {
         self.size.expect("block handle must set size")
     }
 
-    pub fn encode(&self) -> Slice {
-        let mut slice = Slice::with_capacity(16);
+    pub fn encode(&self) -> Bytes {
+        let mut slice = BytesMut::new();
         // TODO: put num as varint64 to reduce size
         let size = self.size.expect("size must be set");
-        slice.put_u64(size);
+        slice.write_u64(size);
         let offset = self.offset.expect("offset must be set");
-        slice.put_u64(offset);
-        slice
+        slice.write_u64(offset);
+        slice.freeze()
     }
 }
 
@@ -78,27 +78,26 @@ impl Footer {
     }
 
     pub fn decode(input: &[u8]) -> Self {
-        let mut slice = Slice::from(input);
+        let mut slice = Bytes::from(input);
         let index_block_handle = BlockHandle::decode_from(&mut slice);
         let metaindex_block_handle = BlockHandle::decode_from(&mut slice);
-        if let Some(magic) = slice.read_i64() {
-            if magic == TABLE_MAGIC_NUMBER {
-                return Self {
-                    index_block_handle: index_block_handle,
-                    metaindex_block_handle: metaindex_block_handle,
-                };
-            }
+        if slice.read_i64() == TABLE_MAGIC_NUMBER {
+            return Self {
+                index_block_handle: index_block_handle,
+                metaindex_block_handle: metaindex_block_handle,
+            };
         };
 
         panic!("magic number is not correct")
     }
 
-    pub fn encode(&self) -> Slice {
-        let mut slice = Slice::with_capacity(FOOTER_MAX_LENGTH);
-        slice.put(&self.index_block_handle.encode());
-        slice.put(&self.metaindex_block_handle.encode());
-        slice.put_i64(TABLE_MAGIC_NUMBER);
-        slice
+    pub fn encode(&self) -> Bytes {
+        let mut slice = BytesMut::with_capacity(FOOTER_MAX_LENGTH);
+        slice.write(&self.index_block_handle.encode());
+        slice.write(&self.metaindex_block_handle.encode());
+        slice.write_i64(TABLE_MAGIC_NUMBER);
+
+        slice.freeze()
     }
 }
 
@@ -111,17 +110,15 @@ pub fn read_block<T: io::Read + io::Seek>(
     let mut buff = vec![0; TRAILER_SIZE + block_size];
     reader.read(&mut buff);
 
-    let mut slice = Slice::from(&buff);
-    let content = slice.read(block_size + 1).expect("content is missing");
-    let _crc = slice.read_u32().expect("invalid crc");
+    let mut slice = Bytes::from(buff);
+    let mut content = slice.read(block_size + 1);
+    let _crc = slice.read_u32();
     // check crc
 
-    let mut cs = Slice::from(&content);
-    cs.split_off(block_size)
-        .get(0)
-        .map(|v| match Compression::from(*v) {
-            Compression::No => Block::new(cs),
-        })
+    let v = content.read(block_size);
+    Some(match Compression::from(content[0]) {
+        Compression::No => Block::new(v),
+    })
 }
 
 #[cfg(test)]

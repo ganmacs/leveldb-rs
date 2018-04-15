@@ -6,7 +6,8 @@ use batch::KeyKind;
 mod skiplist;
 
 pub use ikey::InternalKey;
-pub use bytes::{ByteOrder, Bytes, LittleEndian};
+use bytes::Bytes;
+use byteorder::{ByteOrder, LittleEndian};
 
 const MAX_HEIGHT: usize = 12;
 

@@ -1,5 +1,6 @@
 use std::io::Read;
-use bytes::{ByteOrder, Bytes, BytesMut, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian};
+use bytes::{Bytes, BytesMut};
 use super::{RecordType, crc32, BLOCK_SIZE, CHECKSUM_SIZE, HEADER_SIZE, LENGTH_SIZE, TYPE_SIZE};
 use std::iter::Iterator;
 

@@ -1,15 +1,22 @@
-use slice;
-use bytes::Bytes;
+use std::io;
+use slice::{ByteRead, Bytes, U32_BYTE_SIZE};
+use super::format;
 
 #[derive(Debug)]
 pub struct Block {
-    inner: slice::Slice,
+    inner: Bytes,
     size: usize,
     restart_offset: usize,
 }
 
+pub fn read<T: io::Read + io::Seek>(reader: &mut T, bh_value: &mut Bytes) -> Block {
+    let bh = format::BlockHandle::decode_from(bh_value);
+    let block = format::read_block(reader, &bh).expect("block ga!!!!");
+    block
+}
+
 impl Block {
-    pub fn new(inner: slice::Slice) -> Self {
+    pub fn new(inner: Bytes) -> Self {
         let size = inner.len();
         let mut b = Block {
             size: size,
@@ -17,10 +24,10 @@ impl Block {
             restart_offset: 0,
         };
 
-        b.restart_offset = if size < slice::U32_BYTE_SIZE {
+        b.restart_offset = if size < U32_BYTE_SIZE {
             panic!("TODO: fix")
         } else {
-            size - ((b.restart_count() + 1) * slice::U32_BYTE_SIZE)
+            size - ((b.restart_count() + 1) * U32_BYTE_SIZE)
         };
 
         debug!("restart_offset={:?}, size={:?}", b.restart_offset, b.size);
@@ -28,9 +35,7 @@ impl Block {
     }
 
     pub fn restart_count(&self) -> usize {
-        self.inner
-            .get_u32(self.size - slice::U32_BYTE_SIZE)
-            .expect("restart point is not found") as usize
+        self.inner.get_u32(self.size - U32_BYTE_SIZE) as usize
     }
 
     pub fn iter(&self) -> BlockItertor {
@@ -43,15 +48,15 @@ impl Block {
 }
 
 pub struct BlockItertor {
-    inner: slice::Slice,
+    inner: Bytes,
     restart_offset: usize,
     restart_num: usize,
-    key: Option<slice::Slice>,
-    value: Option<slice::Slice>,
+    key: Option<Bytes>,
+    value: Option<Bytes>,
 }
 
 impl BlockItertor {
-    pub fn new(inner: slice::Slice, restart_offset: usize, restart_num: usize) -> Self {
+    pub fn new(inner: Bytes, restart_offset: usize, restart_num: usize) -> Self {
         debug!(
             "inner={:?}, restart_offset={:?}, restart_num={:?}",
             inner, restart_offset, restart_num
@@ -66,12 +71,11 @@ impl BlockItertor {
     }
 
     fn restart_point(&self, idx: usize) -> Option<usize> {
-        self.inner
-            .get_u32(idx * slice::U32_BYTE_SIZE + self.restart_offset)
-            .map(|v| v as usize)
+        Some(self.inner
+            .get_u32(idx * U32_BYTE_SIZE + self.restart_offset) as usize)
     }
 
-    pub fn seek(&mut self, key: &Bytes) -> Option<slice::Slice> {
+    pub fn seek(&mut self, key: &Bytes) -> Option<Bytes> {
         let mut left = 0;
         let mut right = self.restart_num - 1;
 
@@ -79,7 +83,7 @@ impl BlockItertor {
             let mid = (left + right) / 2;
             let rpoint = self.restart_point(mid).expect("Invalid restart point");
             let (shared, not_shared, value_length, offset) = decode_block(&self.inner, rpoint);
-            let index_key = self.inner.get(offset, not_shared).expect("data!!!");
+            let index_key = self.inner.gets(offset, not_shared);
 
             debug!(
                 "shared={:?},not_shared={:?},value_length={:?},key={:?}",
@@ -115,52 +119,35 @@ impl BlockItertor {
         }
 
         let (shared, not_shared, value_length, next_offset) = decode_block(&self.inner, offset);
-        let k = self.inner.get(next_offset, not_shared).map(|index_key| {
-            if let Some(last_key) = self.key.as_ref().as_mut() {
-                let mut k: slice::Slice = last_key.clone();
-                k.resize(shared as usize);
-                k.put_slice(&index_key);
-                k
-            } else {
-                slice::Slice::from(&index_key)
-            }
-        });
+        let index_key = self.inner.gets(next_offset, not_shared);
+        let k = if let Some(last_key) = self.key.as_ref().as_mut() {
+            let mut k = last_key.clone();
+            k.truncate(shared as usize);
+            k.extend(&index_key);
+            k
+        } else {
+            Bytes::from(index_key)
+        };
 
-        let v = self.inner
-            .get(next_offset + not_shared, value_length)
-            .map(|v| slice::Slice::from(&v));
-
-        if k.is_none() {
-            error!("Not found key");
-            return None;
-        }
-
-        if v.is_none() {
-            error!("Not found value");
-            return None;
-        }
+        let v = self.inner.gets(next_offset + not_shared, value_length);
 
         debug!("key={:?}, value={:?}", k, v);
-        self.key = k;
-        self.value = v;
+        self.key = Some(k);
+        self.value = Some(v);
         Some(next_offset + not_shared + value_length)
     }
 }
 
 // shared, not_shared, value.len()
-fn decode_block(slice: &slice::Slice, offset: usize) -> (usize, usize, usize, usize) {
-    let shared = slice.get_u32(offset).expect("invalid shared data");
-    let not_shared = slice
-        .get_u32(offset + slice::U32_BYTE_SIZE)
-        .expect("invalid not_shared data");
-    let value_length = slice
-        .get_u32(offset + slice::U32_BYTE_SIZE * 2)
-        .expect("invalid value length data");
+fn decode_block(slice: &Bytes, offset: usize) -> (usize, usize, usize, usize) {
+    let shared = slice.get_u32(offset);
+    let not_shared = slice.get_u32(offset + U32_BYTE_SIZE);
+    let value_length = slice.get_u32(offset + U32_BYTE_SIZE * 2);
 
     (
         shared as usize,
         not_shared as usize,
         value_length as usize,
-        offset + slice::U32_BYTE_SIZE * 3,
+        offset + U32_BYTE_SIZE * 3,
     )
 }

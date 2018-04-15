@@ -11,8 +11,6 @@ use version::{FileMetaData, FileMetaDataBuilder};
 use memdb::MemDBIterator;
 use filename;
 use self::table_builder::TableBuilder;
-use slice::Slice;
-// use self::block_format;
 
 enum Compression {
     No,
@@ -44,10 +42,7 @@ pub fn bulid(
         }
 
         meta_builder.largest(k.clone()); // must clone
-
-        let mut s = Slice::from(&k);
-        let v = Slice::from(&v);
-        builder.add(&mut s, &v);
+        builder.add(&k, &v);
     }
 
     builder.build();

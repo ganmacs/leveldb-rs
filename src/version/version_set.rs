@@ -246,7 +246,7 @@ impl Version {
             for meta in meta_files {
                 let v = cache.get(&ukey, meta.file_num, meta.file_size);
                 if v.is_some() {
-                    return v.map(|v| v.to_bytes());
+                    return v;
                 }
             }
         }

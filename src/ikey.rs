@@ -1,4 +1,5 @@
-use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian};
+use bytes::{BufMut, Bytes, BytesMut};
 
 pub struct InternalKey {
     inner: Bytes,
@@ -15,10 +16,10 @@ impl InternalKey {
     pub fn new(user_key: &str, seq: u64) -> Self {
         let size = user_key.len();
         let mut bytes = BytesMut::with_capacity(UKEY_LENGTH + size + SEQ_LENGTH);
-        bytes.put_u32::<LittleEndian>(size as u32);
+        bytes.put_u32_le(size as u32);
         bytes.put_slice(user_key.as_bytes());
-        bytes.put_u64::<LittleEndian>(seq);
-        bytes.put_u64::<LittleEndian>(seq);
+        bytes.put_u64_le(seq);
+        bytes.put_u64_le(seq);
 
         InternalKey {
             inner: bytes.freeze(),

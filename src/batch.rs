@@ -1,4 +1,5 @@
-use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian};
+use bytes::{BufMut, Bytes, BytesMut};
 // use memdb::MemDB;
 use std::iter::{IntoIterator, Iterator};
 
@@ -56,8 +57,8 @@ impl WriteBatch {
 
     pub fn data(&self) -> Bytes {
         let mut v = BytesMut::with_capacity(RECORD_INDEX);
-        v.put_u64::<LittleEndian>(self.seq);
-        v.put_u32::<LittleEndian>(self.count);
+        v.put_u64_le(self.seq);
+        v.put_u32_le(self.count);
         v.extend(self.data.clone()); // XXX
         v.freeze()
     }
@@ -72,7 +73,7 @@ impl WriteBatch {
     fn append_str(&mut self, value: &str) {
         // TODO: use varint
         let value_size = value.len();
-        self.data.put_u32::<LittleEndian>(value_size as u32);
+        self.data.put_u32_le(value_size as u32);
         self.data.put_slice(value.as_bytes());
     }
 

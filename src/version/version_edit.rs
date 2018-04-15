@@ -1,4 +1,5 @@
-use bytes::{BufMut, ByteOrder, Bytes, BytesMut, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian};
+use bytes::{BufMut, Bytes, BytesMut};
 use log_record::LogWriter;
 use std::io::Write;
 use super::{FileMetaData, BLOCK_SIZE};
@@ -88,28 +89,28 @@ impl VersionEdit {
 
         if self.log_number != 0 {
             res.put_u8(Tag::LogNumber as u8);
-            res.put_u64::<LittleEndian>(self.log_number as u64);
+            res.put_u64_le(self.log_number as u64);
         }
 
         if self.prev_log_number != 0 {
             res.put_u8(Tag::PrevLogNumber as u8);
-            res.put_u64::<LittleEndian>(self.prev_log_number as u64);
+            res.put_u64_le(self.prev_log_number as u64);
         }
 
         if self.next_file_number != 0 {
             res.put_u8(Tag::NextFileNumber as u8);
-            res.put_u64::<LittleEndian>(self.next_file_number as u64);
+            res.put_u64_le(self.next_file_number as u64);
         }
 
         if self.last_sequence != 0 {
             res.put_u8(Tag::LastSequence as u8);
-            res.put_u64::<LittleEndian>(self.last_sequence as u64);
+            res.put_u64_le(self.last_sequence as u64);
         }
 
         for &(ref meta, ref level) in self.files.iter() {
             res.put_u8(Tag::NewFile as u8);
-            res.put_u64::<LittleEndian>(*level as u64);
-            res.put_u64::<LittleEndian>(meta.file_num);
+            res.put_u64_le(*level as u64);
+            res.put_u64_le(meta.file_num);
             res.put_slice(&meta.largest());
             res.put_slice(&meta.smallest());
         }

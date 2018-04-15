@@ -1,477 +1,200 @@
-use std::{cmp, ops, ptr, u8};
-use bytes::{BufMut, ByteOrder, Bytes, LittleEndian};
+use std::{cmp, u8};
+use bytes::BufMut;
+use byteorder::{ByteOrder, LittleEndian};
+pub use bytes::{Bytes, BytesMut};
 
 use std::mem;
-use bytes::BytesMut;
 
 pub type Slice2 = BytesMut;
 
 pub const U64_BYTE_SIZE: usize = mem::size_of::<u64>();
+pub const I64_BYTE_SIZE: usize = mem::size_of::<i64>();
 pub const U32_BYTE_SIZE: usize = mem::size_of::<u32>();
 pub const U16_BYTE_SIZE: usize = mem::size_of::<u16>();
 pub const U8_BYTE_SIZE: usize = mem::size_of::<u8>();
 
-pub mod sop {
-    use super::*;
-    use bytes::{BufMut, ByteOrder, LittleEndian};
+pub trait ByteRead {
+    fn gets(&self, offset: usize, size: usize) -> Self;
+    fn get_u8<'a>(&self, offset: usize) -> u8;
+    fn get_u16(&self, offset: usize) -> u16;
+    fn get_u32(&self, offset: usize) -> u32;
+    fn get_u64(&self, offset: usize) -> u64;
+    fn read(&mut self, offset: usize) -> Self;
+    fn read_u8(&mut self) -> u8;
+    fn read_u16(&mut self) -> u16;
+    fn read_u32(&mut self) -> u32;
+    fn read_u64(&mut self) -> u64;
+    fn read_i64(&mut self) -> i64;
+}
 
-    pub fn put_u8(s: &mut Slice2, n: u8) {
-        s.put_u8(n);
+impl ByteRead for Bytes {
+    fn gets(&self, offset: usize, size: usize) -> Self {
+        self.slice(offset, offset + size)
     }
 
-    pub fn put_u16(s: &mut Slice2, n: u16) {
-        s.put_u16::<LittleEndian>(n);
+    fn get_u8<'a>(&self, offset: usize) -> u8 {
+        self[offset]
     }
 
-    pub fn put_u32(s: &mut Slice2, n: u32) {
-        s.put_u32::<LittleEndian>(n);
-    }
-
-    pub fn put_u64(s: &mut Slice2, n: u64) {
-        s.put_u64::<LittleEndian>(n);
-    }
-
-    pub fn put_i64(s: &mut Slice2, n: i64) {
-        s.put_i64::<LittleEndian>(n);
-    }
-
-    pub fn put_str(s: &mut Slice2, n: &str) {
-        s.extend_from_slice(n.as_bytes());
-    }
-
-    pub fn put_slice(s: &mut Slice2, n: &[u8]) {
-        s.extend_from_slice(n);
-    }
-
-    pub fn get_u8<'a>(s: &Slice2, offset: usize) -> u8 {
-        s[offset]
-    }
-
-    pub fn get_u16(s: &Slice2, offset: usize) -> u16 {
-        let buf = &s[offset..offset + U16_BYTE_SIZE];
+    fn get_u16(&self, offset: usize) -> u16 {
+        let buf = &self[offset..offset + U16_BYTE_SIZE];
         LittleEndian::read_u16(buf)
     }
 
-    pub fn get_u32(s: &Slice2, offset: usize) -> u32 {
-        let buf = &s[offset..offset + U32_BYTE_SIZE];
+    fn get_u32(&self, offset: usize) -> u32 {
+        let buf = &self[offset..offset + U32_BYTE_SIZE];
         LittleEndian::read_u32(buf)
     }
 
-    pub fn get_u64(s: &Slice2, offset: usize) -> u64 {
-        let buf = &s[offset..offset + U64_BYTE_SIZE];
+    fn get_u64(&self, offset: usize) -> u64 {
+        let buf = &self[offset..offset + U64_BYTE_SIZE];
         LittleEndian::read_u64(buf)
     }
 
-    pub fn read_u8(s: &mut Slice2) -> u8 {
-        s.split_to(U8_BYTE_SIZE)[0]
+    fn read(&mut self, offset: usize) -> Self {
+        self.split_to(offset)
     }
 
-    pub fn read_u16(s: &mut Slice2) -> u16 {
-        let buf = &s.split_to(U16_BYTE_SIZE)[0..U16_BYTE_SIZE];
+    fn read_u8(&mut self) -> u8 {
+        self.split_to(U8_BYTE_SIZE)[0]
+    }
+
+    fn read_u16(&mut self) -> u16 {
+        let buf = &self.split_to(U16_BYTE_SIZE)[0..U16_BYTE_SIZE];
         LittleEndian::read_u16(buf)
     }
 
-    pub fn read_u32(s: &mut Slice2) -> u32 {
-        let buf = &s.split_to(U32_BYTE_SIZE)[0..U32_BYTE_SIZE];
+    fn read_u32(&mut self) -> u32 {
+        let buf = &self.split_to(U32_BYTE_SIZE)[0..U32_BYTE_SIZE];
         LittleEndian::read_u32(buf)
     }
 
-    pub fn read_u64(s: &mut Slice2) -> u64 {
-        let buf = &s.split_to(U64_BYTE_SIZE)[0..U64_BYTE_SIZE];
+    fn read_u64(&mut self) -> u64 {
+        let buf = &self.split_to(U64_BYTE_SIZE)[0..U64_BYTE_SIZE];
         LittleEndian::read_u64(buf)
+    }
+
+    fn read_i64(&mut self) -> i64 {
+        let buf = &self.split_to(I64_BYTE_SIZE)[0..I64_BYTE_SIZE];
+        LittleEndian::read_i64(buf)
     }
 }
 
-pub fn short_successor(v: &mut Slice) {
-    let l = v.len();
+impl ByteRead for BytesMut {
+    fn gets(&self, offset: usize, size: usize) -> Self {
+        BytesMut::from(self[offset..offset + size].to_vec()) // XXX
+    }
+
+    fn get_u8<'a>(&self, offset: usize) -> u8 {
+        self[offset]
+    }
+
+    fn get_u16(&self, offset: usize) -> u16 {
+        let buf = &self[offset..offset + U16_BYTE_SIZE];
+        LittleEndian::read_u16(buf)
+    }
+
+    fn get_u32(&self, offset: usize) -> u32 {
+        let buf = &self[offset..offset + U32_BYTE_SIZE];
+        LittleEndian::read_u32(buf)
+    }
+
+    fn get_u64(&self, offset: usize) -> u64 {
+        let buf = &self[offset..offset + U64_BYTE_SIZE];
+        LittleEndian::read_u64(buf)
+    }
+
+    fn read_u8(&mut self) -> u8 {
+        self.split_to(U8_BYTE_SIZE)[0]
+    }
+
+    fn read_u16(&mut self) -> u16 {
+        let buf = &self.split_to(U16_BYTE_SIZE)[0..U16_BYTE_SIZE];
+        LittleEndian::read_u16(buf)
+    }
+
+    fn read_u32(&mut self) -> u32 {
+        let buf = &self.split_to(U32_BYTE_SIZE)[0..U32_BYTE_SIZE];
+        LittleEndian::read_u32(buf)
+    }
+
+    fn read_u64(&mut self) -> u64 {
+        let buf = &self.split_to(U64_BYTE_SIZE)[0..U64_BYTE_SIZE];
+        LittleEndian::read_u64(buf)
+    }
+
+    fn read_i64(&mut self) -> i64 {
+        let buf = &self.split_to(I64_BYTE_SIZE)[0..I64_BYTE_SIZE];
+        LittleEndian::read_i64(buf)
+    }
+
+    fn read(&mut self, offset: usize) -> Self {
+        self.split_to(offset)
+    }
+}
+
+pub trait ByteWrite {
+    fn write_u8(&mut self, n: u8);
+    fn write_u16(&mut self, n: u16);
+    fn write_u32(&mut self, n: u32);
+    fn write_u64(&mut self, n: u64);
+    fn write_i64(&mut self, n: i64);
+    fn write(&mut self, n: &Bytes);
+    fn write_slice(&mut self, n: &[u8]);
+}
+
+impl ByteWrite for BytesMut {
+    fn write_u8(&mut self, n: u8) {
+        self.put_u8(n);
+    }
+
+    fn write_u16(&mut self, n: u16) {
+        self.put_u16_le(n);
+    }
+
+    fn write_u32(&mut self, n: u32) {
+        self.put_u32_le(n);
+    }
+
+    fn write_u64(&mut self, n: u64) {
+        self.put_u64_le(n);
+    }
+
+    fn write_i64(&mut self, n: i64) {
+        self.put_i64_le(n);
+    }
+
+    fn write(&mut self, n: &Bytes) {
+        self.extend(n);
+    }
+
+    fn write_slice(&mut self, n: &[u8]) {
+        self.extend_from_slice(n);
+    }
+}
+
+pub fn short_successor(val: &mut BytesMut) {
+    let l = val.len();
 
     for i in 0..l {
-        if let Some(v) = v.inner.get_mut(i) {
-            if v != &u8::MAX {
-                *v += 1;
-                return;
-            }
+        let k = val[i];
+        if k != u8::MAX {
+            val[i] += 1;
+            return;
         }
     }
 }
 
-pub fn shortest_separator(key: &mut Slice, limit: &Slice) {
+pub fn shortest_separator(key: &mut BytesMut, limit: &Bytes) {
     let min_size = cmp::min(key.len(), limit.len());
 
     for i in 0..min_size {
-        if key.inner[i] != limit.inner[i] {
-            if let Some(val) = key.inner.get_mut(i) {
-                if val != &u8::MAX {
-                    *val += 1;
-                    return;
-                }
+        if key[i] != limit[i] {
+            let val = key[i];
+            if val != u8::MAX {
+                key[i] += 1;
+                return;
             }
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Slice {
-    inner: Vec<u8>,
-}
-
-impl Slice {
-    pub fn new() -> Self {
-        Self { inner: vec![] }
-    }
-
-    pub fn with_capacity(size: usize) -> Self {
-        Self {
-            inner: Vec::with_capacity(size),
-        }
-    }
-
-    pub fn from(inner: &[u8]) -> Self {
-        Self {
-            inner: Vec::from(inner),
-        }
-    }
-
-    // TODO: delete
-    pub fn from_bytes(bytes: &Bytes) -> Self {
-        Self {
-            inner: Vec::from(bytes.as_ref()),
-        }
-    }
-
-    // TODO: delete
-    pub fn to_bytes(self) -> Bytes {
-        Bytes::from(self.inner)
-    }
-
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
-
-    pub fn put_u8(&mut self, n: u8) -> usize {
-        self.inner.put_u8(n);
-        1
-    }
-
-    pub fn put_u16(&mut self, n: u16) -> usize {
-        self.inner.put_u16::<LittleEndian>(n);
-        U16_BYTE_SIZE
-    }
-
-    pub fn put_u32(&mut self, n: u32) -> usize {
-        self.inner.put_u32::<LittleEndian>(n);
-        U32_BYTE_SIZE
-    }
-
-    pub fn put_u64(&mut self, n: u64) -> usize {
-        self.inner.put_u64::<LittleEndian>(n);
-        U64_BYTE_SIZE
-    }
-
-    pub fn put_i64(&mut self, n: i64) -> usize {
-        self.inner.put_i64::<LittleEndian>(n);
-        U64_BYTE_SIZE + 1 // XXX
-    }
-
-    pub fn put_str(&mut self, n: &str) -> usize {
-        let s = n.len();
-        self.inner.put_slice(n.as_bytes());
-        s
-    }
-
-    pub fn get_u8(&self, offset: usize) -> Option<u8> {
-        self.inner.get(offset).map(|v| *v)
-    }
-
-    pub fn get_u16(&self, offset: usize) -> Option<u16> {
-        let lim = offset + U16_BYTE_SIZE;
-        if self.inner.len() >= lim {
-            let mut buf = [0; U16_BYTE_SIZE];
-            buf.copy_from_slice(&self.inner[offset..lim]);
-            Some(LittleEndian::read_u16(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn get_u32(&self, offset: usize) -> Option<u32> {
-        let lim = offset + U32_BYTE_SIZE;
-        if self.inner.len() >= lim {
-            let mut buf = [0; U32_BYTE_SIZE];
-            buf.copy_from_slice(&self.inner[offset..lim]);
-            Some(LittleEndian::read_u32(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn get_u64(&self, offset: usize) -> Option<u64> {
-        let lim = offset + U64_BYTE_SIZE;
-        if self.inner.len() >= lim {
-            let mut buf = [0; U64_BYTE_SIZE];
-            buf.copy_from_slice(&self.inner[offset..lim]);
-            Some(LittleEndian::read_u64(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn get(&self, offset: usize, size: usize) -> Option<Vec<u8>> {
-        let lim = offset + size;
-        if self.inner.len() >= lim {
-            let mut buf = vec![0; size];
-            buf.copy_from_slice(&self.inner[offset..lim]);
-            Some(buf)
-        } else {
-            None
-        }
-    }
-
-    pub fn resize(&mut self, size: usize) {
-        self.inner.resize(size, 0)
-    }
-
-    pub fn put(&mut self, n: &Self) -> usize {
-        let s = n.len();
-        self.inner.put(n.inner.clone());
-        s
-    }
-
-    pub fn put_slice(&mut self, n: &[u8]) -> usize {
-        let s = n.len();
-        self.inner.put(n);
-        s
-    }
-
-    pub fn read_u8(&mut self) -> Option<u8> {
-        if self.inner.len() >= U8_BYTE_SIZE {
-            let buf = self.split_on(U8_BYTE_SIZE);
-            Some(buf[0])
-        } else {
-            None
-        }
-    }
-
-    pub fn read_u16(&mut self) -> Option<u16> {
-        if self.inner.len() >= U16_BYTE_SIZE {
-            let buf = self.split_on(U16_BYTE_SIZE);
-            Some(LittleEndian::read_u16(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn read_u32(&mut self) -> Option<u32> {
-        let s = self.inner.len();
-        if s >= U32_BYTE_SIZE {
-            let buf = self.split_on(U32_BYTE_SIZE);
-            Some(LittleEndian::read_u32(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn read_u64(&mut self) -> Option<u64> {
-        let s = self.inner.len();
-        if s >= U64_BYTE_SIZE {
-            let buf = self.split_on(U64_BYTE_SIZE);
-            Some(LittleEndian::read_u64(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn read_i64(&mut self) -> Option<i64> {
-        let s = self.inner.len();
-        if s >= U64_BYTE_SIZE {
-            let buf = self.split_on(U64_BYTE_SIZE);
-            Some(LittleEndian::read_i64(&buf))
-        } else {
-            None
-        }
-    }
-
-    pub fn read(&mut self, i: usize) -> Option<Vec<u8>> {
-        let s = self.inner.len();
-        if s >= i {
-            Some(self.split_on(i))
-        } else {
-            None
-        }
-    }
-
-    pub fn split_off(&mut self, at: usize) -> Vec<u8> {
-        self.inner.split_off(at)
-    }
-
-    pub fn split_on(&mut self, at: usize) -> Vec<u8> {
-        assert!(at <= self.inner.len(), "`at` out of bounds");
-
-        let other_len = self.inner.len() - at;
-        let mut other = Vec::with_capacity(at);
-
-        unsafe {
-            other.set_len(at);
-
-            let ptr = self.inner.as_ptr();
-            ptr::copy_nonoverlapping(ptr, other.as_mut_ptr(), other.len());
-            ptr::copy(ptr.offset(at as isize), self.inner.as_mut_ptr(), other_len);
-
-            self.inner.set_len(other_len);
-        }
-        other
-    }
-}
-
-impl AsRef<[u8]> for Slice {
-    fn as_ref(&self) -> &[u8] {
-        self.inner.as_ref()
-    }
-}
-
-impl ops::Index<usize> for Slice {
-    type Output = u8;
-
-    fn index(&self, v: usize) -> &u8 {
-        &self.inner[v]
-    }
-}
-
-impl ops::Index<ops::Range<usize>> for Slice {
-    type Output = [u8];
-
-    fn index(&self, v: ops::Range<usize>) -> &[u8] {
-        &self.inner[v]
-    }
-}
-
-impl PartialEq<Slice> for Slice {
-    fn eq(&self, other: &Slice) -> bool {
-        self.inner == other.inner
-    }
-}
-
-impl PartialOrd<Slice> for Slice {
-    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
-        (self.inner).partial_cmp(&other.inner)
-    }
-}
-
-impl PartialEq<[u8]> for Slice {
-    fn eq(&self, other: &[u8]) -> bool {
-        self.as_ref() == other
-    }
-}
-
-impl PartialOrd<[u8]> for Slice {
-    fn partial_cmp(&self, other: &[u8]) -> Option<cmp::Ordering> {
-        (self.as_ref()).partial_cmp(other)
-    }
-}
-
-impl PartialEq<Slice> for [u8] {
-    fn eq(&self, other: &Slice) -> bool {
-        other == self
-    }
-}
-
-impl PartialOrd<Slice> for [u8] {
-    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
-        other.partial_cmp(self)
-    }
-}
-
-impl PartialEq<str> for Slice {
-    fn eq(&self, other: &str) -> bool {
-        self == other.as_bytes()
-    }
-}
-
-impl PartialOrd<str> for Slice {
-    fn partial_cmp(&self, other: &str) -> Option<cmp::Ordering> {
-        self.partial_cmp(other.as_bytes())
-    }
-}
-
-impl PartialEq<Slice> for str {
-    fn eq(&self, other: &Slice) -> bool {
-        other == self
-    }
-}
-
-impl PartialOrd<Slice> for str {
-    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
-        other.partial_cmp(self)
-    }
-}
-
-impl PartialEq<Vec<u8>> for Slice {
-    fn eq(&self, other: &Vec<u8>) -> bool {
-        &self.inner[..] == &other[..]
-    }
-}
-
-impl PartialOrd<Vec<u8>> for Slice {
-    fn partial_cmp(&self, other: &Vec<u8>) -> Option<cmp::Ordering> {
-        (self.inner[..]).partial_cmp(&other[..])
-    }
-}
-
-impl PartialEq<Slice> for Vec<u8> {
-    fn eq(&self, other: &Slice) -> bool {
-        other == self
-    }
-}
-
-impl PartialOrd<Slice> for Vec<u8> {
-    fn partial_cmp(&self, other: &Slice) -> Option<cmp::Ordering> {
-        other.partial_cmp(self)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Slice;
-
-    #[test]
-    fn read_and_write_slice_test() {
-        let mut slice = Slice::with_capacity(100);
-        slice.put_u8(1);
-        assert_eq!(slice.len(), 1);
-        slice.put_u16(2);
-        assert_eq!(slice.len(), 1 + 2);
-
-        slice.put_u32(3);
-        assert_eq!(slice.len(), 1 + 2 + 4);
-        slice.put_u64(4);
-        assert_eq!(slice.len(), 1 + 2 + 4 + 8);
-
-        assert_eq!(slice.read_u8(), Some(1));
-        assert_eq!(slice.len(), 2 + 4 + 8);
-        assert_eq!(slice.read_u16(), Some(2));
-        assert_eq!(slice.len(), 4 + 8);
-        assert_eq!(slice.read_u32(), Some(3));
-        assert_eq!(slice.len(), 8);
-        assert_eq!(slice.read_u64(), Some(4));
-        assert_eq!(slice.len(), 0);
-    }
-
-    #[test]
-    fn slice_ord_test() {
-        let slice = Slice::from(b"bbb");
-        let slice2 = Slice::from(b"bba");
-        let slice3 = Slice::from(b"baa");
-
-        assert!(slice == slice);
-        assert!(slice > slice2);
-        assert!(slice3 < slice2);
-
-        assert!(&slice > "bba");
-        assert!(&slice > "baa");
-        assert!(&slice > "baa");
-
-        assert!(slice > b"bba".to_vec());
-        assert!(slice > b"baa".to_vec());
-        assert!(slice > b"baa".to_vec());
     }
 }

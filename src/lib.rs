@@ -1,3 +1,4 @@
+extern crate byteorder;
 extern crate bytes;
 extern crate crc;
 extern crate rand;

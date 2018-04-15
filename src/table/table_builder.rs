@@ -3,7 +3,7 @@ use std::io::BufWriter;
 use crc::{Hasher32, crc32};
 use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Footer},
             table_writer::TableWriter};
-use slice::Slice;
+use slice::{ByteWrite, Bytes, BytesMut};
 use slice;
 
 pub struct TableBuilder {
@@ -13,7 +13,7 @@ pub struct TableBuilder {
     filter_block: Option<u64>, // FIX
     pending_handle: BlockHandle,
     pending_index_entry: bool,
-    last_key: Slice,
+    last_key: Bytes,
 }
 
 pub const TRAILER_SIZE: usize = 5;
@@ -34,21 +34,22 @@ impl TableBuilder {
             pending_handle: BlockHandle::new(),
             pending_index_entry: false,
             filter_block: None,
-            last_key: Slice::new(),
+            last_key: Bytes::new(),
         }
     }
 
-    pub fn add(&mut self, key: &mut Slice, value: &Slice) {
+    pub fn add(&mut self, key: &Bytes, value: &Bytes) {
+        let mut k = key.clone();
         if self.pending_index_entry {
-            slice::short_successor(key);
+            slice::short_successor(k.to_mut());
 
             let content = self.pending_handle.encode();
-            self.index_block.add(key, &content);
+            self.index_block.add(&k, &content);
             self.pending_index_entry = false;
         }
 
-        self.data_block.add(key, value);
-        self.last_key = key.clone();
+        self.data_block.add(&k, value);
+        self.last_key = k;
 
         // FIX: 1024
         if self.data_block.estimated_current_size() >= 1024 {
@@ -81,7 +82,7 @@ impl TableBuilder {
         // index
         let index_block_handle = {
             if self.pending_index_entry {
-                slice::short_successor(&mut self.last_key);
+                slice::short_successor(self.last_key.to_mut());
                 // let ss = TableBuilder::succ(&self.last_key);
                 let content = self.pending_handle.encode();
                 self.index_block.add(&self.last_key, &content);
@@ -126,12 +127,12 @@ impl TableBuilder {
         self.pending_index_entry = true;
     }
 
-    fn write_block(&mut self, content: &Slice) -> BlockHandle {
+    fn write_block(&mut self, content: &Bytes) -> BlockHandle {
         let kind = Compression::No;
         self.write_raw_block(content, kind)
     }
 
-    fn write_raw_block(&mut self, content: &Slice, kindt: Compression) -> BlockHandle {
+    fn write_raw_block(&mut self, content: &Bytes, kindt: Compression) -> BlockHandle {
         // offset must be set before writer.write
         let bh = BlockHandle::from((content.len()) as u64, self.writer.offset());
 
@@ -150,9 +151,9 @@ impl TableBuilder {
                 digest.sum32()
             };
 
-            let mut trailer = Slice::with_capacity(TRAILER_SIZE);
-            trailer.put_u8(kind);
-            trailer.put_u32(crc);
+            let mut trailer = BytesMut::with_capacity(TRAILER_SIZE);
+            trailer.write_u8(kind);
+            trailer.write_u32(crc);
             self.writer
                 .write(trailer.as_ref())
                 .expect("Writing data is failed");
