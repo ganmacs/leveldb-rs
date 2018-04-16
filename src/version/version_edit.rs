@@ -50,7 +50,7 @@ impl VersionEdit {
         }
     }
 
-    pub fn files(&self) -> &Vec<(FileMetaData, usize)> {
+    pub fn files<'a>(&self) -> &Vec<(FileMetaData, usize)> {
         &self.files
     }
 
@@ -111,8 +111,8 @@ impl VersionEdit {
             res.put_u8(Tag::NewFile as u8);
             res.put_u64_le(*level as u64);
             res.put_u64_le(meta.file_num);
-            res.put_slice(&meta.largest());
-            res.put_slice(&meta.smallest());
+            res.put_slice(meta.largest().as_ref());
+            res.put_slice(meta.smallest().as_ref());
         }
 
         debug!(

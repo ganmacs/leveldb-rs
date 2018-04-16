@@ -72,7 +72,8 @@ impl LevelDB {
     }
 
     pub fn get(&mut self, key: &str) -> Option<Bytes> {
-        let ikey = InternalKey::new(key, 0); // XXX use actual seq
+        let snapshot = self.versions.last_sequence;
+        let ikey = InternalKey::new(key, snapshot);
 
         let ret = self.mem
             .get(&ikey)

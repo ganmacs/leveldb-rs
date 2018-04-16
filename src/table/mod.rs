@@ -11,6 +11,8 @@ use version::{FileMetaData, FileMetaDataBuilder};
 use memdb::MemDBIterator;
 use filename;
 use self::table_builder::TableBuilder;
+use ikey;
+use slice::Bytes;
 
 enum Compression {
     No,
@@ -35,16 +37,18 @@ pub fn bulid(
 
     let fname = filename::FileType::Table(dbname, num).filename();
     let mut builder = TableBuilder::new(&fname);
+    let mut largest = Bytes::new(); // XXX
 
     for (i, (k, v)) in iterator.enumerate() {
         if i == 0 {
-            meta_builder.smallest(k.clone());
+            meta_builder.smallest(ikey::InternalKey::from(k.clone()));
         }
 
-        meta_builder.largest(k.clone()); // must clone
+        largest = k.clone();
         builder.add(&k, &v);
     }
 
+    meta_builder.largest(ikey::InternalKey::from(largest));
     builder.build();
 
     meta_builder.file_size(builder.size() as u64);

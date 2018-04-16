@@ -90,7 +90,7 @@ mod tests {
         ];
 
         for v in hash {
-            db.add(KeyKind::SET, &Bytes::from(v.0), &v.1);
+            db.add(0, KeyKind::SET, &Bytes::from(v.0), &v.1);
             assert_eq!(db.get(&InternalKey::new(&v.0, 0)).unwrap(), v.1);
         }
 

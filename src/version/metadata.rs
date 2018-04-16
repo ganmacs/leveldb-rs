@@ -1,11 +1,11 @@
-use ikey::InternalKey2;
+use ikey::InternalKey;
 use std::cmp::Ordering;
 
 pub struct FileMetaDataBuilder {
     file_num: Option<u64>,
     file_size: Option<u64>,
-    largest: Option<InternalKey2>,
-    smallest: Option<InternalKey2>,
+    largest: Option<InternalKey>,
+    smallest: Option<InternalKey>,
 }
 
 impl FileMetaDataBuilder {
@@ -28,12 +28,12 @@ impl FileMetaDataBuilder {
         self
     }
 
-    pub fn largest(&mut self, largest: InternalKey2) -> &Self {
+    pub fn largest(&mut self, largest: InternalKey) -> &Self {
         self.largest = Some(largest);
         self
     }
 
-    pub fn smallest(&mut self, smallest: InternalKey2) -> &Self {
+    pub fn smallest(&mut self, smallest: InternalKey) -> &Self {
         self.smallest = Some(smallest);
         self
     }
@@ -68,16 +68,16 @@ impl FileMetaDataBuilder {
 pub struct FileMetaData {
     pub file_num: u64,
     pub file_size: u64,
-    largest: InternalKey2,
-    smallest: InternalKey2,
+    largest: InternalKey,
+    smallest: InternalKey,
 }
 
 impl FileMetaData {
-    pub fn largest(&self) -> InternalKey2 {
+    pub fn largest(&self) -> InternalKey {
         self.largest.clone()
     }
 
-    pub fn smallest(&self) -> InternalKey2 {
+    pub fn smallest(&self) -> InternalKey {
         self.smallest.clone()
     }
 }
