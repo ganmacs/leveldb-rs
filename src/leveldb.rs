@@ -74,13 +74,16 @@ impl LevelDB {
     pub fn get(&mut self, key: &str) -> Option<Bytes> {
         let ikey = InternalKey::new(key, 0); // XXX use actual seq
 
-        let mut cache = &mut self.table_cache;
-        self.versions.current().and_then(|v| v.get(&ikey, cache))
+        let ret = self.mem
+            .get(&ikey)
+            .or_else(|| self.imm.as_ref().and_then(|v| v.get(&ikey)));
 
-        // self.mem
-        //     .get(&ikey)
-        //     .or_else(|| self.imm.as_ref().and_then(|v| v.get(&ikey)))
-        //     .or_else(|| self.versions.current().and_then(|v| v.get(&ikey)))
+        if ret.is_none() {
+            let mut cache = &mut self.table_cache;
+            self.versions.current().and_then(|v| v.get(&ikey, cache))
+        } else {
+            ret
+        }
     }
 
     pub fn set(&mut self, key: &str, value: &str) {
