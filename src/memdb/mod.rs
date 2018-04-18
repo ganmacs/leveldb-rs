@@ -2,12 +2,10 @@ extern crate bytes;
 extern crate rand;
 
 use std::iter::{IntoIterator, Iterator};
-use batch::KeyKind;
-mod skiplist;
 
-pub use ikey::InternalKey;
-use bytes::Bytes;
-use byteorder::{ByteOrder, LittleEndian};
+mod skiplist;
+use ikey::{InternalKey, KeyKind};
+use slice::Bytes;
 
 const MAX_HEIGHT: usize = 12;
 
@@ -26,24 +24,16 @@ impl MemDB {
         self.inner.empty()
     }
 
-    // Should be LookupKey
     pub fn get(&self, key: &InternalKey) -> Option<Bytes> {
-        // let v = key.memtable_key();
-        let v = key.user_key();
-        self.inner.get(&v)
+        let k = key.memtable_key();
+        debug!("Get {:?} from memdb", k);
+        self.inner.get(&k)
     }
 
-    pub fn add(&mut self, seq: u64, key_kind: KeyKind, ukey: &Bytes, value: &Bytes) {
-        let n = ukey.len();
-        let mut buf = [0; 4];
-        LittleEndian::write_u32(&mut buf, n as u32);
-        // let mut key = Bytes::from(buf.to_vec());
-        // key.extend(Bytes::from(ukey));
-
-        match key_kind {
-            KeyKind::SET => self.inner.insert(ukey, &value),
-            KeyKind::DELETE => (), // TODO
-        };
+    pub fn add(&mut self, ikey: &InternalKey, value: &Bytes) {
+        let k = ikey.memtable_key();
+        debug!("Set {:?}=>{:?} to memdb", k, value);
+        self.inner.insert(&k, &value)
     }
 }
 
@@ -72,7 +62,7 @@ impl Iterator for MemDBIterator {
 
 #[cfg(test)]
 mod tests {
-    use super::{Bytes, InternalKey, KeyKind, MemDB};
+    use super::*;
 
     #[test]
     fn test_skiplist() {
@@ -90,7 +80,7 @@ mod tests {
         ];
 
         for v in hash {
-            db.add(0, KeyKind::SET, &Bytes::from(v.0), &v.1);
+            db.add(0, KeyKind::Value, &Bytes::from(v.0), &v.1);
             assert_eq!(db.get(&InternalKey::new(&v.0, 0)).unwrap(), v.1);
         }
 
@@ -101,7 +91,7 @@ mod tests {
     fn test_skiplist_iter() {
         let mut db = MemDB::new();
 
-        let mut hash: Vec<(&str, Bytes)> = vec![
+        let hash: Vec<(&str, Bytes)> = vec![
             ("key", Bytes::from("value")),
             ("key1", Bytes::from("value1")),
             ("key2", Bytes::from("value2")),
@@ -113,7 +103,7 @@ mod tests {
         ];
 
         for v in &hash.clone() {
-            db.add(0, KeyKind::SET, &Bytes::from(v.0), &v.1);
+            db.add(0, KeyKind::Value, &Bytes::from(v.0), &v.1);
         }
 
         let mut it = db.into_iter();

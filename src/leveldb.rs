@@ -73,7 +73,7 @@ impl LevelDB {
 
     pub fn get(&mut self, key: &str) -> Option<Bytes> {
         let snapshot = self.versions.last_sequence;
-        let ikey = InternalKey::new(key, snapshot);
+        let ikey = InternalKey::new(key.as_bytes(), snapshot);
 
         let ret = self.mem
             .get(&ikey)
@@ -189,7 +189,8 @@ impl LevelDB {
             let mut iter = batch.into_iter();
             for i in nseq..num_seq {
                 let (key_kind, ukey, value) = iter.next().expect("batch size is invalid");
-                mem.add(i as u64, key_kind, &ukey, &value);
+                let ikey = InternalKey::new_with_kind(&ukey, i as u64, key_kind);
+                mem.add(&ikey, &value);
             }
         }
 
@@ -226,7 +227,8 @@ impl LevelDB {
         self.log.as_mut().map(|l| l.add_record(batch.data()));
 
         for (key_kind, ukey, value) in batch.into_iter() {
-            self.mem.add(seq, key_kind, &ukey, &value);
+            let ikey = InternalKey::new_with_kind(&ukey, seq as u64, key_kind);
+            self.mem.add(&ikey, &value);
         }
     }
 }

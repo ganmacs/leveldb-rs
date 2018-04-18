@@ -59,11 +59,11 @@ impl AsRef<[u8]> for InternalKey {
     }
 }
 
-fn make_key(user_key: &str, seq: u64, kind: KeyKind) -> Bytes {
+fn make_key(user_key: &[u8], seq: u64, kind: KeyKind) -> Bytes {
     let size = user_key.len();
     let mut bytes = BytesMut::with_capacity(UKEY_LENGTH + size + SEQ_LENGTH);
     bytes.write_u32(size as u32);
-    bytes.write_slice(user_key.as_bytes());
+    bytes.write_slice(user_key);
     bytes.write_u64(seq << 1 | kind as u64); // XXX
     bytes.freeze()
 }
@@ -73,13 +73,19 @@ impl InternalKey {
         InternalKey { inner }
     }
 
-    pub fn new(user_key: &str, seq: u64) -> Self {
+    pub fn new_with_kind(user_key: &[u8], seq: u64, kind: KeyKind) -> Self {
+        InternalKey {
+            inner: make_key(user_key, seq, kind),
+        }
+    }
+
+    pub fn new(user_key: &[u8], seq: u64) -> Self {
         InternalKey {
             inner: make_key(user_key, seq, KeyKind::Value),
         }
     }
 
-    pub fn new_delete_key(user_key: &str, seq: u64) -> Self {
+    pub fn new_delete_key(user_key: &[u8], seq: u64) -> Self {
         InternalKey {
             inner: make_key(user_key, seq, KeyKind::Delete),
         }

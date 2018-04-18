@@ -2,6 +2,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use bytes::{BufMut, Bytes, BytesMut};
 // use memdb::MemDB;
 use std::iter::{IntoIterator, Iterator};
+use ikey::KeyKind;
 
 const COUNT_INDEX: usize = 8;
 const RECORD_INDEX: usize = 12;
@@ -12,12 +13,6 @@ const COUNT_SIZE: usize = 4;
 const TYPE_SIZE: usize = 1;
 const KEY_LENGTH_SIZE: usize = 4;
 const VALUE_LENGTH_SIZE: usize = 4;
-
-#[derive(Debug)]
-pub enum KeyKind {
-    SET,
-    DELETE,
-}
 
 type Key = Bytes;
 type Value = Bytes;
@@ -65,7 +60,7 @@ impl WriteBatch {
 
     pub fn put(&mut self, key: &str, value: &str) {
         self.inc_count();
-        self.data.put_u8(KeyKind::SET as u8);
+        self.data.put_u8(KeyKind::Value as u8);
         self.append_str(key);
         self.append_str(value);
     }
@@ -120,9 +115,9 @@ impl Iterator for WriteBatchIterator {
             let d = self.data.slice(self.pos, self.pos + TYPE_SIZE);
             self.pos += TYPE_SIZE;
             if d[0] == 0 {
-                KeyKind::SET
+                KeyKind::Value
             } else {
-                KeyKind::DELETE
+                KeyKind::Delete
             }
         };
 
