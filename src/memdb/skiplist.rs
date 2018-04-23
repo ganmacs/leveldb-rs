@@ -1,26 +1,25 @@
 use rand;
 use rand::Rng;
-use bytes::{BufMut, Bytes, BytesMut};
-use byteorder::{ByteOrder, LittleEndian};
-use super::MAX_HEIGHT;
+use bytes::Bytes;
+use std::cmp::Ordering;
+use comparator::Comparator;
 
-type Key = Bytes;
-type Value = Bytes;
-type IdxFragment = [u16; 14];
+const DATA_SIZE: usize = 8192;
+const MAX_HEIGHT: usize = 7;
 
 #[derive(Debug)]
-pub struct SkipList {
+pub struct SkipList<T> {
     data: Bytes,
-    idx: SkipIndex,
+    index: Vec<SkipValueIndex>,
+    cmp: T,
 }
 
-const DATA_SIZE: usize = 4096;
-
-impl SkipList {
-    pub fn new() -> Self {
+impl<T: Comparator> SkipList<T> {
+    pub fn new(c: T) -> Self {
         SkipList {
             data: Bytes::with_capacity(DATA_SIZE),
-            idx: SkipIndex::with_capacity(DATA_SIZE),
+            index: vec![SkipValueIndex::new(0, 0, 0)],
+            cmp: c,
         }
     }
 
@@ -28,320 +27,171 @@ impl SkipList {
         self.data.len() == 0
     }
 
-    pub fn get(&self, key: &Key) -> Option<Bytes> {
-        let (n, exact) = self.find_greater_than_eq(key, &mut None);
-        if exact {
-            let offset = self.idx.val(n);
-            Some(self.load(offset))
-        } else {
+    pub fn seek(&self, key: &Bytes) -> Option<Bytes> {
+        let sv = self.find_greater_than_eq(key, &mut None);
+        if sv.id == self.head().id {
             None
+        } else {
+            Some(self.load(sv))
         }
     }
 
-    pub fn insert(&mut self, key: &Key, value: &Value) {
-        let mut prev = [HEAD; 12];
-        let (n, exact) = self.find_greater_than_eq(key, &mut Some(&mut prev));
+    pub fn insert(&mut self, key: Bytes) {
+        let mut prev = [0; MAX_HEIGHT];
+        let _ = {
+            self.find_greater_than_eq(&key, &mut Some(&mut prev));
+        };
 
-        if exact {
-            let voffset = self.save(value.as_ref());
-            debug!(
-                "Overwrite value {:?} to {:?} about key={:?}",
-                self.idx.val(n),
-                value,
-                key
-            );
-            self.idx.update_val(n, voffset as u16);
-            return;
-        }
+        let new_index = self.index.len();
+        let mut new_v = SkipValueIndex::new(new_index, self.data.len(), key.len());
+        self.store(key);
 
-        let mut ibuilder = IndexBuilder::new();
-
-        let n1 = self.idx.len();
-        let koffset = self.save(key.as_ref());
-        ibuilder.key(koffset as u16);
-        let voffset = self.save(value.as_ref());
-        ibuilder.value(voffset as u16);
-
-        // let height = rand::thread_rng().gen_range(1, MAX_HEIGHT);
-        let height = 12;
-
+        let height = rand::thread_rng().gen_range(1, MAX_HEIGHT);
         for level in 0..height {
-            let p = prev[level];
-            let next_i = self.idx.next(p + level);
-            ibuilder.next(level, next_i as u16);
-            self.idx.update_next(p + level, n1 as u16);
+            let i = prev[level];
+            let next_i = self.index[i].next(level);
+            self.index[i].set_next(level, new_index as u16);
+            new_v.set_next(level, next_i as u16);
         }
 
-        self.idx.extend_from_slice(&ibuilder.build());
+        self.index.push(new_v);
     }
 
-    pub fn find_greater_than_eq(
+    fn find_greater_than_eq(
         &self,
-        key: &Key,
-        prev: &mut Option<&mut [usize; 12]>,
-    ) -> (usize, bool) {
-        let mut level = MAX_HEIGHT - 1;
-        let mut i = 0;
-        let mut exact;
-        let mut n;
+        key: &Bytes,
+        prev: &mut Option<&mut [usize; MAX_HEIGHT]>,
+    ) -> &SkipValueIndex {
+        let mut level = MAX_HEIGHT;
+        let mut sv: &SkipValueIndex = self.head();
+        let mut next = self.head();
 
-        loop {
-            n = self.idx.next(i + level);
-            loop {
-                if n == HEAD {
-                    exact = false;
-                    break;
+        while level > 0 {
+            next = &self.index[sv.next(level - 1)];
+            if next.id == self.head().id {
+                prev.as_mut().map(|p| p[level - 1] = sv.id);
+                level -= 1;
+            } else {
+                if self.cmp.compare(key, &self.load(&next)) == Ordering::Greater {
+                    sv = next;
+                } else {
+                    prev.as_mut().map(|p| p[level - 1] = sv.id);
+                    level -= 1;
                 }
-
-                let k = self.load(self.idx.key(n));
-                let cmp = k >= key;
-                if cmp {
-                    exact = k == key;
-                    break;
-                }
-
-                i = n;
-                n = self.idx.next(i + level);
             }
-
-            if let Some(v) = prev.as_mut() {
-                v[level] = i;
-            }
-
-            if level == 0 {
-                return (n, exact);
-            }
-
-            level -= 1;
         }
+        next
     }
 
-    fn save(&mut self, v: &[u8]) -> usize {
-        let len = v.len();
-        let mut buf = BytesMut::with_capacity(len + 4);
-
-        let offset = self.data.len();
-        buf.put_u64_le(len as u64);
-        buf.put_slice(v);
-
-        self.data.extend(buf);
-        offset
+    fn head(&self) -> &SkipValueIndex {
+        &self.index[0]
     }
 
-    fn load(&self, i: usize) -> Bytes {
-        let u64_offset = i + 8;
-        let buf = self.data.slice(i, u64_offset);
-        let v = LittleEndian::read_u64(&buf) as usize;
-        self.data.slice(u64_offset, u64_offset + v)
+    fn load(&self, sr: &SkipValueIndex) -> Bytes {
+        self.data.slice(sr.idx, sr.idx + sr.size)
+    }
+
+    fn store(&mut self, sr: Bytes) {
+        self.data.extend(sr);
+    }
+
+    pub fn iter<'a>(&'a self) -> SkipListIterator<'a, T> {
+        SkipListIterator {
+            pos: 0,
+            inner: &self,
+        }
     }
 }
 
 // INDEX data format
-// | KEY_i | VAL_i | NEXT_i_0 | NEXT_i_1 | ... | NEXT_i_11 | KEY_(i+1) | VAL_(i+1) | NEXT_(i+1)_0 |
-const KEY: usize = 0;
-const VAL: usize = 1;
-const NEXT: usize = 2;
-
-const HEAD: usize = 0;
-
-#[derive(Debug)]
-struct IndexBuilder {
-    inner: IdxFragment,
+#[derive(Debug, Clone)]
+struct SkipValueIndex {
+    pub id: usize,
+    pub size: usize,
+    pub idx: usize,
+    nexts: [u16; MAX_HEIGHT],
 }
 
-impl IndexBuilder {
-    pub fn new() -> Self {
-        IndexBuilder {
-            inner: [HEAD as u16; 14],
+impl SkipValueIndex {
+    pub fn new(id: usize, idx: usize, size: usize) -> Self {
+        Self {
+            id,
+            idx,
+            size,
+            nexts: [0; MAX_HEIGHT],
         }
     }
 
-    pub fn key(&mut self, v: u16) -> &Self {
-        self.inner[KEY] = v;
-        self
+    pub fn next(&self, level: usize) -> usize {
+        self.nexts[level] as usize
     }
 
-    pub fn value(&mut self, v: u16) -> &Self {
-        self.inner[VAL] = v;
-        self
-    }
-
-    pub fn next(&mut self, i: usize, v: u16) -> &Self {
-        self.inner[i + NEXT] = v;
-        self
-    }
-
-    pub fn build(&self) -> IdxFragment {
-        self.inner
+    pub fn set_next(&mut self, level: usize, v: u16) {
+        self.nexts[level] = v;
     }
 }
 
-#[derive(Debug)]
-struct SkipIndex {
-    inner: Vec<u16>,
-}
-
-impl SkipIndex {
-    pub fn with_capacity(cap: usize) -> Self {
-        let mut skip = SkipIndex {
-            inner: Vec::with_capacity(cap),
-        };
-        skip.extend_from_slice(&IndexBuilder::new().build());
-        skip
-    }
-
-    pub fn extend_from_slice(&mut self, slice: &IdxFragment) {
-        self.inner.extend_from_slice(slice);
-    }
-
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
-
-    pub fn key(&self, i: usize) -> usize {
-        self.inner[i + KEY] as usize
-    }
-
-    pub fn val(&self, i: usize) -> usize {
-        self.inner[i + VAL] as usize
-    }
-
-    pub fn next(&self, i: usize) -> usize {
-        self.inner[i + NEXT] as usize
-    }
-
-    pub fn update_key(&mut self, i: usize, v: u16) {
-        self.inner[i + KEY] = v
-    }
-
-    pub fn update_val(&mut self, i: usize, v: u16) {
-        self.inner[i + VAL] = v
-    }
-
-    pub fn update_next(&mut self, i: usize, v: u16) {
-        self.inner[i + NEXT] = v
-    }
-}
-
-pub struct SkipListIterator {
+pub struct SkipListIterator<'a, T: 'a> {
+    inner: &'a SkipList<T>,
     pos: usize,
-    idx: SkipIndex,
-    inner: Bytes,
 }
 
-impl Iterator for SkipListIterator {
-    type Item = (Key, Value);
+impl<'a, T: Comparator> Iterator for SkipListIterator<'a, T> {
+    type Item = Bytes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.pos = self.next_0();
-        if self.pos == HEAD {
-            return None;
-        }
+        let next_id = self.inner.index[self.pos].next(0); // level 0
+        self.pos = next_id;
 
-        let vi = self.idx.val(self.pos);
-        let ki = self.idx.key(self.pos);
-        Some((self.load(ki), self.load(vi)))
-    }
-}
-
-impl SkipListIterator {
-    fn next_0(&self) -> usize {
-        self.idx.next(self.pos)
-    }
-
-    // TODO
-    fn load(&self, i: usize) -> Bytes {
-        let u64_offset = i + 8;
-        let buf = self.inner.slice(i, u64_offset);
-        let v = LittleEndian::read_u64(&buf) as usize;
-        self.inner.slice(u64_offset, u64_offset + v)
-    }
-}
-
-impl IntoIterator for SkipList {
-    type Item = (Key, Value);
-    type IntoIter = SkipListIterator;
-
-    fn into_iter(self) -> Self::IntoIter {
-        SkipListIterator {
-            pos: 0,
-            idx: self.idx,
-            inner: self.data,
+        let ref next = self.inner.index[next_id];
+        if next.id == self.inner.head().id {
+            None
+        } else {
+            Some(self.inner.load(next))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Bytes, SkipList};
+    use super::*;
 
-    #[test]
-    fn test_skiplist() {
-        let mut list = SkipList::new();
+    struct TestKeyComparator;
 
-        let hash = vec![
-            (Bytes::from("key"), Bytes::from("value")),
-            (Bytes::from("key1"), Bytes::from("value1")),
-            (Bytes::from("key2"), Bytes::from("value2")),
-            (Bytes::from("key3"), Bytes::from("value3")),
-            (Bytes::from("key4"), Bytes::from("value4")),
-            (Bytes::from("key5"), Bytes::from("value5")),
-            (Bytes::from("key6"), Bytes::from("value___6")),
-            (Bytes::from("key77"), Bytes::from("value   7")),
-        ];
-
-        for v in hash {
-            list.insert(&v.0, &v.1);
-            assert_eq!(list.get(&v.0).unwrap(), v.1);
-        }
-
-        assert_eq!(list.get(&Bytes::from("notfound")), None);
-    }
-
-    #[test]
-    fn test_skiplist_bulk_insert() {
-        let mut list = SkipList::new();
-        let size = 1000;
-        for i in 0..size {
-            list.insert(
-                &Bytes::from(format!("key{}", i)),
-                &Bytes::from(format!("value{}", i)),
-            )
-        }
-
-        for i in 0..size {
-            assert!(list.get(&Bytes::from(format!("key{}", i))).is_some());
+    impl Comparator for TestKeyComparator {
+        fn compare(&self, a: &Bytes, b: &Bytes) -> Ordering {
+            a.cmp(b)
         }
     }
 
     #[test]
-    fn test_skiplist_iter() {
-        let mut list = SkipList::new();
+    fn skiplist_set_and_get_test() {
+        let mut sl = SkipList::new(TestKeyComparator);
 
-        let hash = vec![
-            (Bytes::from("key"), Bytes::from("value")),
-            (Bytes::from("key1"), Bytes::from("value1")),
-            (Bytes::from("key2"), Bytes::from("value2")),
-            (Bytes::from("key3"), Bytes::from("value3")),
-            (Bytes::from("key4"), Bytes::from("value4")),
-            (Bytes::from("key5"), Bytes::from("value5")),
-            (Bytes::from("key6"), Bytes::from("value___6")),
-            (Bytes::from("key77"), Bytes::from("value   7")),
-        ];
+        for i in 0..100 {
+            let key = Bytes::from(format!("key{:?}", i));
+            sl.insert(key.clone());
+            assert_eq!(sl.seek(&key), Some(key))
+        }
+    }
 
-        for v in &hash.clone() {
-            list.insert(&v.0, &v.1);
+    #[test]
+    fn skiplist_iterator_value_is_ordered() {
+        let mut sl = SkipList::new(TestKeyComparator);
+
+        let keys: Vec<Bytes> = (0..10)
+            .map(|v: usize| Bytes::from(format!("key{:?}", v)))
+            .collect();
+
+        {
+            keys.clone().reverse();
+            for k in keys.iter() {
+                sl.insert(k.clone())
+            }
         }
 
-        let mut it = list.into_iter();
-        assert_eq!(it.next().as_ref(), hash.get(0));
-        assert_eq!(it.next().as_ref(), hash.get(1));
-        assert_eq!(it.next().as_ref(), hash.get(2));
-        assert_eq!(it.next().as_ref(), hash.get(3));
-        assert_eq!(it.next().as_ref(), hash.get(4));
-        assert_eq!(it.next().as_ref(), hash.get(5));
-        assert_eq!(it.next().as_ref(), hash.get(6));
-        assert_eq!(it.next().as_ref(), hash.get(7));
-        assert_eq!(it.next().as_ref(), None);
+        for (a, b) in sl.iter().zip(keys) {
+            assert_eq!(a, b);
+        }
     }
 }

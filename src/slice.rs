@@ -19,7 +19,7 @@ pub trait ByteRead {
     fn get_u16(&self, offset: usize) -> u16;
     fn get_u32(&self, offset: usize) -> u32;
     fn get_u64(&self, offset: usize) -> u64;
-    fn read(&mut self, offset: usize) -> Self;
+    fn read(&mut self, size: usize) -> Self;
     fn read_u8(&mut self) -> u8;
     fn read_u16(&mut self) -> u16;
     fn read_u32(&mut self) -> u32;
@@ -51,8 +51,8 @@ impl ByteRead for Bytes {
         LittleEndian::read_u64(buf)
     }
 
-    fn read(&mut self, offset: usize) -> Self {
-        self.split_to(offset)
+    fn read(&mut self, size: usize) -> Self {
+        self.split_to(size)
     }
 
     fn read_u8(&mut self) -> u8 {
@@ -128,8 +128,8 @@ impl ByteRead for BytesMut {
         LittleEndian::read_i64(buf)
     }
 
-    fn read(&mut self, offset: usize) -> Self {
-        self.split_to(offset)
+    fn read(&mut self, size: usize) -> Self {
+        self.split_to(size)
     }
 }
 

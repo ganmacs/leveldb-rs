@@ -17,6 +17,7 @@ mod memdb;
 mod ikey;
 mod filename;
 mod version;
+mod comparator;
 mod table;
 mod leveldb;
 mod slice;

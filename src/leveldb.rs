@@ -195,7 +195,7 @@ impl LevelDB {
         }
 
         if !mem.empty() {
-            self.write_level0_table(edit, &mut mem.into_iter())
+            self.write_level0_table(edit, &mut mem.iter())
                 .expect("failed to write write level 0 table")
         }
 

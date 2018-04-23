@@ -12,6 +12,17 @@ pub enum KeyKind {
     Delete,
 }
 
+impl From<u8> for KeyKind {
+    fn from(v: u8) -> Self {
+        match v {
+            0 => KeyKind::Value,
+            1 => KeyKind::Delete,
+            _ => unreachable!(),
+        }
+    }
+}
+
+// key = | value_length(4 bytes) | value (n bytes) | seq + kind (8 bytes: seq(63 bits), kind(1 bit))
 #[derive(Clone, Eq, Ord, Debug)]
 pub struct InternalKey {
     inner: Bytes,
@@ -64,7 +75,8 @@ fn make_key(user_key: &[u8], seq: u64, kind: KeyKind) -> Bytes {
     let mut bytes = BytesMut::with_capacity(UKEY_LENGTH + size + SEQ_LENGTH);
     bytes.write_u32(size as u32);
     bytes.write_slice(user_key);
-    bytes.write_u64(seq << 1 | kind as u64); // XXX
+    bytes.write_u64(seq << 1 | kind as u64);
+    debug!("key is {:?}", bytes);
     bytes.freeze()
 }
 
@@ -91,12 +103,17 @@ impl InternalKey {
         }
     }
 
+    pub fn inner(&self) -> Bytes {
+        self.inner.clone()
+    }
+
     pub fn user_key(&self) -> Bytes {
         self.inner.gets(UKEY_LENGTH, self.key_size())
     }
 
     pub fn memtable_key(&self) -> Bytes {
-        self.inner.gets(0, UKEY_LENGTH + self.key_size())
+        self.inner
+            .gets(0, self.key_size() + UKEY_LENGTH + SEQ_LENGTH)
     }
 
     pub fn seq_number(&self) -> usize {
@@ -120,15 +137,18 @@ impl InternalKey {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::InternalKey;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_internal_key() {
-//         let ikey = InternalKey::new("hoge", 100);
-//         assert_eq!(ikey.user_key(), "hoge");
-//         assert_eq!(ikey.memtable_key(), "\x04\0\0\0hoge");
-//         assert_eq!(ikey.seq_number(), 100);
-//     }
-// }
+    #[test]
+    fn test_internal_key() {
+        let ikey = InternalKey::new(&Bytes::from("hoge"), 2);
+        assert_eq!(ikey.user_key(), "hoge");
+        assert_eq!(
+            ikey.memtable_key(),
+            Bytes::from("\x04\0\0\0hoge\x04\0\0\0\0\0\0\0")
+        );
+        assert_eq!(ikey.seq_number(), 2);
+    }
+}
