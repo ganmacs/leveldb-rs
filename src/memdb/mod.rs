@@ -22,6 +22,10 @@ impl MemDB {
         self.inner.empty()
     }
 
+    pub fn approximately_size(&self) -> usize {
+        self.inner.data_usage()
+    }
+
     pub fn get(&self, key: &InternalKey) -> Option<Bytes> {
         let k = key.memtable_key();
         println!("Get {:?} from memdb", k);

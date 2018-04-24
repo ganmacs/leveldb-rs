@@ -23,6 +23,10 @@ impl<T: Comparator> SkipList<T> {
         }
     }
 
+    pub fn data_usage(&self) -> usize {
+        self.data.len()
+    }
+
     pub fn empty(&self) -> bool {
         self.data.len() == 0
     }
