@@ -21,6 +21,7 @@ mod comparator;
 mod table;
 mod leveldb;
 mod slice;
+mod configure;
 
 pub use batch::WriteBatch;
 pub use leveldb::open;

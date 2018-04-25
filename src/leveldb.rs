@@ -11,6 +11,7 @@ use memdb::{MemDB, MemDBIterator};
 use batch::WriteBatch;
 use log_record::{LogReader, LogWriter};
 use version::{VersionEdit, VersionSet};
+use configure;
 use table;
 
 pub fn open(dir: &str) -> LevelDB {
@@ -55,6 +56,7 @@ pub struct LevelDB {
     imm: Option<MemDB>,
     log_nubmer: u64,
     table_cache: table::TableCache,
+    configure: configure::Configure,
     // Should have log file?
 }
 
@@ -68,6 +70,7 @@ impl LevelDB {
             imm: None,
             log_nubmer: 0,
             table_cache: table::TableCache::new(dir),
+            configure: Default::default(),
         }
     }
 
