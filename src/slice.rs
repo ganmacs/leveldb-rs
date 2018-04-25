@@ -5,8 +5,6 @@ pub use bytes::{Bytes, BytesMut};
 
 use std::mem;
 
-pub type Slice2 = BytesMut;
-
 pub const U64_BYTE_SIZE: usize = mem::size_of::<u64>();
 pub const I64_BYTE_SIZE: usize = mem::size_of::<i64>();
 pub const U32_BYTE_SIZE: usize = mem::size_of::<u32>();

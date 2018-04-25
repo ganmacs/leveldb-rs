@@ -1,5 +1,4 @@
 use std::cmp;
-use byteorder::ByteOrder;
 use slice::{ByteRead, ByteWrite, Bytes, BytesMut};
 
 const UKEY_LENGTH: usize = 4;
