@@ -1,6 +1,4 @@
-use std::path;
-use std::fs;
-use std::str;
+use std::{fs, mem, path, str};
 use std::io::{BufReader, BufWriter};
 use bytes::Bytes;
 use env_logger;
@@ -90,7 +88,7 @@ impl LevelDB {
         }
     }
 
-    pub fn set(&mut self, key: &str, value: &str) {
+    pub fn set(&mut self, key: &str, value: &str) -> Result<(), String> {
         debug!("Set key={:?}, value={:?}", key, value);
         let mut b = WriteBatch::new();
         b.put(key, value);
@@ -222,7 +220,9 @@ impl LevelDB {
         Ok(())
     }
 
-    pub fn apply(&mut self, mut batch: WriteBatch) {
+    pub fn apply(&mut self, mut batch: WriteBatch) -> Result<(), String> {
+        self.make_room_for_write(true)?; // for debug
+
         let seq = self.versions.last_sequence + 1;
         batch.set_seq(seq);
         self.versions.set_last_sequence(seq);
@@ -232,6 +232,53 @@ impl LevelDB {
         for (key_kind, ukey, value) in batch.into_iter() {
             let ikey = InternalKey::new_with_kind(&ukey, seq as u64, key_kind);
             self.mem.add(&ikey, &value);
+        }
+
+        Ok(())
+    }
+
+    // For now, single thread model
+    fn make_room_for_write(&mut self, force: bool) -> Result<(), String> {
+        if !force && self.configure.write_buffer_size > self.mem.approximately_size() {
+            return Ok(());
+        }
+        debug!("Make rom for write!");
+
+        self.log_nubmer = self.versions.next_file_num();
+        let fname = filename::FileType::Log(&self.dbname, self.log_nubmer).filename();
+        debug!("Use log file {:?}", fname);
+        self.log = Some(fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(fname)
+            .map(|fd| LogWriter::new(BufWriter::new(fd)))
+            .map_err(|_| "failed to open file")?);
+
+        let old = mem::replace(&mut self.mem, MemDB::new());
+        self.imm = Some(old);
+        self.maybe_compaction();
+        Ok(())
+    }
+
+    fn maybe_compaction(&mut self) {
+        if self.imm.is_some() {
+            self.compact_memtable()
+        }
+    }
+
+    fn compact_memtable(&mut self) {
+        if let Some(mem) = mem::replace(&mut self.imm, None) {
+            let mut edit = VersionEdit::new(0);
+            if let Err(msg) = self.write_level0_table(&mut edit, &mut mem.iter()) {
+                self.imm = Some(mem); // put it back
+                error!("Failed to write_level0_table {:?}", msg);
+                return;
+            };
+
+            edit.log_number = self.log_nubmer;
+            self.versions.log_and_apply(&mut edit);
+
+            self.delete_obsolete_file()
         }
     }
 }
