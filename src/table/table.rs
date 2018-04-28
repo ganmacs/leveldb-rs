@@ -52,8 +52,8 @@ impl Table {
     }
 
     pub fn get(&mut self, key: &Bytes) -> Option<Bytes> {
-        if let Some(index_value) = self.index_block.iter().seek(key) {
-            let mut b = block::read(&mut self.reader, &mut index_value.clone()); // XXX
+        if let Some(ref index_value) = self.index_block.iter().seek(key).as_ref() {
+            let mut b = block::read(&mut self.reader, index_value);
             b.iter().seek(key)
         } else {
             None

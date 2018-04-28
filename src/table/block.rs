@@ -9,8 +9,8 @@ pub struct Block {
     restart_offset: usize,
 }
 
-pub fn read<T: io::Read + io::Seek>(reader: &mut T, bh_value: &mut Bytes) -> Block {
-    let bh = format::BlockHandle::decode_from(bh_value);
+pub fn read<T: io::Read + io::Seek>(reader: &mut T, bh_value: &Bytes) -> Block {
+    let bh = format::BlockHandle::decode_from(&mut bh_value.clone());
     let block = format::read_block(reader, &bh).expect("block ga!!!!");
     block
 }
