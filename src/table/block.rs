@@ -53,6 +53,7 @@ pub struct BlockIterator {
     restart_num: usize,
     pub key: Option<Bytes>,
     pub value: Option<Bytes>,
+    current: usize,
 }
 
 impl BlockIterator {
@@ -67,6 +68,7 @@ impl BlockIterator {
             restart_num,
             key: None,
             value: None,
+            current: 0,
         }
     }
 
@@ -97,13 +99,12 @@ impl BlockIterator {
             }
         }
 
-        let mut offset = self.restart_point(left).expect("invalid restart pont");
-        while let Some(next_offset) = self.parse_key(offset) {
+        self.current = self.restart_point(left).expect("invalid restart pont");
+        while self.parse_key() {
             if let Some(k) = self.key.as_ref() {
                 if k >= key {
                     break;
                 }
-                offset = next_offset;
             } else {
                 break;
             }
@@ -112,15 +113,16 @@ impl BlockIterator {
         self.value.clone()
     }
 
-    pub fn parse_key(&mut self, offset: usize) -> Option<usize> {
-        let limit = self.restart_offset;
-        if limit <= offset {
-            return None; // End of data
+    pub fn parse_key(&mut self) -> bool {
+        if self.restart_offset <= self.current {
+            return false; // End of data
         }
 
-        let (shared, not_shared, value_length, next_offset) = decode_block(&self.inner, offset);
+        let (shared, not_shared, value_length, next_offset) =
+            decode_block(&self.inner, self.current);
         let index_key = self.inner.gets(next_offset, not_shared);
-        let k = if let Some(last_key) = self.key.as_ref().as_mut() {
+
+        let k = if let Some(last_key) = self.key.as_ref() {
             let mut k = last_key.clone();
             k.truncate(shared as usize);
             k.extend(&index_key);
@@ -130,11 +132,27 @@ impl BlockIterator {
         };
 
         let v = self.inner.gets(next_offset + not_shared, value_length);
-
         debug!("key={:?}, value={:?}", k, v);
+
         self.key = Some(k);
         self.value = Some(v);
-        Some(next_offset + not_shared + value_length)
+        self.current = next_offset + not_shared + value_length;
+        true
+    }
+}
+
+impl Iterator for BlockIterator {
+    type Item = (Bytes, Bytes);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.parse_key() {
+            match (self.key.as_ref(), self.value.as_ref()) {
+                (Some(k), Some(v)) => Some((k.clone(), v.clone())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
