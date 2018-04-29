@@ -38,8 +38,8 @@ impl Block {
         self.inner.get_u32(self.size - U32_BYTE_SIZE) as usize
     }
 
-    pub fn iter(&self) -> BlockItertor {
-        BlockItertor::new(
+    pub fn iter(&self) -> BlockIterator {
+        BlockIterator::new(
             self.inner.clone(),
             self.restart_offset,
             self.restart_count(),
@@ -47,7 +47,7 @@ impl Block {
     }
 }
 
-pub struct BlockItertor {
+pub struct BlockIterator {
     inner: Bytes,
     restart_offset: usize,
     restart_num: usize,
@@ -55,7 +55,7 @@ pub struct BlockItertor {
     value: Option<Bytes>,
 }
 
-impl BlockItertor {
+impl BlockIterator {
     pub fn new(inner: Bytes, restart_offset: usize, restart_num: usize) -> Self {
         debug!(
             "inner={:?}, restart_offset={:?}, restart_num={:?}",
