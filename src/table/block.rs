@@ -51,8 +51,8 @@ pub struct BlockIterator {
     inner: Bytes,
     restart_offset: usize,
     restart_num: usize,
-    key: Option<Bytes>,
-    value: Option<Bytes>,
+    pub key: Option<Bytes>,
+    pub value: Option<Bytes>,
 }
 
 impl BlockIterator {
