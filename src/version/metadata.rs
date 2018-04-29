@@ -68,8 +68,8 @@ impl FileMetaDataBuilder {
 pub struct FileMetaData {
     pub file_num: u64,
     pub file_size: u64,
-    largest: InternalKey,
-    smallest: InternalKey,
+    pub largest: InternalKey,
+    pub smallest: InternalKey,
 }
 
 impl FileMetaData {
