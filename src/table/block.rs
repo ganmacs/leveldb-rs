@@ -82,7 +82,7 @@ impl BlockIterator {
         let mut right = self.restart_num - 1;
 
         while left < right {
-            let mid = (left + right) / 2;
+            let mid = (left + right + 1) / 2;
             let rpoint = self.restart_point(mid).expect("Invalid restart point");
             let (shared, not_shared, value_length, offset) = decode_block(&self.inner, rpoint);
             let index_key = self.inner.gets(offset, not_shared);
@@ -92,6 +92,7 @@ impl BlockIterator {
                 shared, not_shared, value_length, index_key
             );
 
+            // MUST use comparator
             if &index_key < key {
                 left = mid;
             } else {
@@ -99,7 +100,8 @@ impl BlockIterator {
             }
         }
 
-        self.current = self.restart_point(left).expect("invalid restart pont");
+        let p = self.restart_point(left).expect("invalid restart pont");
+        self.set_seek_point(p);
         while self.parse_key() {
             if let Some(k) = self.key.as_ref() {
                 if k >= key {
@@ -136,8 +138,12 @@ impl BlockIterator {
 
         self.key = Some(k);
         self.value = Some(v);
-        self.current = next_offset + not_shared + value_length;
+        self.set_seek_point(next_offset + not_shared + value_length);
         true
+    }
+
+    fn set_seek_point(&mut self, p: usize) {
+        self.current = p
     }
 }
 
@@ -168,4 +174,72 @@ fn decode_block(slice: &Bytes, offset: usize) -> (usize, usize, usize, usize) {
         value_length as usize,
         offset + U32_BYTE_SIZE * 3,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::block_builder::BlockBuilder;
+
+    fn create_seed_helper(size: usize) -> Vec<(Bytes, Bytes)> {
+        (0..size)
+            .into_iter()
+            .map(|v| {
+                (
+                    Bytes::from(format!("key{:02?}", v).as_bytes()),
+                    Bytes::from(format!("value{:02?}", v).as_bytes()),
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_block_iterator() {
+        let mut bb = BlockBuilder::new();
+        let dic = create_seed_helper(30);
+
+        for v in &dic {
+            bb.add(&v.0, &v.1);
+        }
+
+        let block = Block::new(bb.build()).iter();
+        for (b, d) in block.zip(&dic) {
+            assert_eq!(b.0, d.0);
+            assert_eq!(b.1, d.1);
+        }
+    }
+
+    #[test]
+    fn test_block_iterator_seek() {
+        let mut bb = BlockBuilder::new();
+        let dic = create_seed_helper(5);
+
+        for v in &dic {
+            bb.add(&v.0, &v.1);
+        }
+
+        let mut block = Block::new(bb.build()).iter();
+        for d in &dic {
+            println!("{:?}", d.0);
+            println!("{:?}", d.1);
+            println!("{:?} ", block.seek(&d.0));
+            assert_eq!(block.seek(&d.0).as_ref(), Some(&d.1));
+        }
+
+        // restart_size is 2
+        let mut bb = BlockBuilder::new();
+        let dic = create_seed_helper(30);
+
+        for v in &dic {
+            bb.add(&v.0, &v.1);
+        }
+
+        let mut block = Block::new(bb.build()).iter();
+        for d in &dic {
+            println!("{:?}", d.0);
+            println!("{:?}", d.1);
+            println!("{:?} ", block.seek(&d.0));
+            assert_eq!(block.seek(&d.0).as_ref(), Some(&d.1));
+        }
+    }
 }
