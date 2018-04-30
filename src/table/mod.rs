@@ -3,7 +3,6 @@ mod table_writer;
 mod block;
 mod block_builder;
 mod format;
-mod block_reader;
 mod table_cache;
 mod table;
 
