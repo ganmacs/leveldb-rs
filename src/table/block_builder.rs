@@ -106,7 +106,7 @@ mod tests {
         let v = bb.build();
         assert_eq!(
             v.as_ref().to_vec(),
-            b"\0\0\0\0\x04\0\0\0\x05\0\0\0key0value\x03\0\0\0\x01\0\0\0\x05\0\0\01value\0\0\0\0"
+            b"\0\0\0\0\x04\0\0\0\x05\0\0\0key0value\x03\0\0\0\x01\0\0\0\x05\0\0\01value\0\0\0\0\x01\0\0\0"
                 .to_vec()
         );
     }
@@ -122,7 +122,7 @@ mod tests {
             );
         }
 
-        let s = bb.estimated_current_size() - (U32_ADDR_SIZE);
+        let s = bb.estimated_current_size() - (U32_ADDR_SIZE * (1 + bb.restarts.len()));
         bb.add(
             &Bytes::from("key16".as_bytes()),
             &Bytes::from("v".as_bytes()),
@@ -132,13 +132,9 @@ mod tests {
             &Bytes::from("v".as_bytes()),
         );
 
-        let mut v = bb.build();
-        let (_, v2) = v.split_at(s);
+        let result = bb.build();
+        let (_, r2) = result.split_at(s);
 
-        let vv: Vec<u8> = vec![
-            0, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0, 0, 107, 101, 121, 49, 54, 118, 4, 0, 0, 0, 1, 0, 0, 0,
-            1, 0, 0, 0, 55, 118, 228, 0, 0, 0, 1, 0, 0, 0,
-        ];
-        assert_eq!(v2.to_vec(), vv);
+        assert_eq!(r2.to_vec(), b"\0\0\0\0\x05\0\0\0\x01\0\0\0key16v\x04\0\0\0\x01\0\0\0\x01\0\0\07v\0\0\0\0\xe4\0\0\0\x02\0\0\0".to_vec());
     }
 }
