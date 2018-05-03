@@ -1,5 +1,4 @@
 mod table_builder;
-mod table_writer;
 mod block;
 mod block_builder;
 mod format;

@@ -1,13 +1,12 @@
 use std::fs;
-use std::io::Write;
+use std::io;
 use std::io::BufWriter;
 use crc::{Hasher32, crc32};
-use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Footer},
-            table_writer::TableWriter};
+use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Footer}};
 use slice::{ByteWrite, Bytes, BytesMut};
 use slice;
 
-pub struct TableBuilder<T: Write> {
+pub struct TableBuilder<T: io::Write> {
     writer: TableWriter<T>,
     data_block: BlockBuilder,
     index_block: BlockBuilder,
@@ -30,7 +29,7 @@ pub fn new(fname: &str) -> TableBuilder<BufWriter<fs::File>> {
     TableBuilder::new(BufWriter::new(fd))
 }
 
-impl<T: Write> TableBuilder<T> {
+impl<T: io::Write> TableBuilder<T> {
     pub fn new(w: T) -> Self {
         Self {
             writer: TableWriter::new(w),
@@ -165,5 +164,29 @@ impl<T: Write> TableBuilder<T> {
         }
 
         bh
+    }
+}
+
+pub struct TableWriter<T> {
+    inner: T,
+    offset: usize,
+}
+
+impl<T: io::Write> TableWriter<T> {
+    pub fn new(writer: T) -> TableWriter<T> {
+        TableWriter {
+            inner: writer,
+            offset: 0,
+        }
+    }
+
+    pub fn write(&mut self, content: &[u8]) -> Result<usize, io::Error> {
+        debug!("write data to table {:?}", content);
+        self.offset += content.len();
+        self.inner.write(content)
+    }
+
+    pub fn offset(&self) -> u64 {
+        self.offset as u64
     }
 }
