@@ -1,6 +1,7 @@
 extern crate byteorder;
 extern crate bytes;
 extern crate crc;
+extern crate memmap;
 extern crate rand;
 extern crate regex;
 
