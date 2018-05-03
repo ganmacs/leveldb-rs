@@ -9,7 +9,6 @@ mod table;
 use version::{FileMetaData, FileMetaDataBuilder};
 use memdb::MemDBIterator;
 use filename;
-use self::table_builder::TableBuilder;
 use ikey;
 use slice::Bytes;
 
@@ -35,7 +34,7 @@ pub fn bulid(
     meta_builder.file_num(num);
 
     let fname = filename::FileType::Table(dbname, num).filename();
-    let mut builder = TableBuilder::new(&fname);
+    let mut builder = table_builder::new(&fname);
     let mut largest = Bytes::new(); // XXX
 
     for (i, (k, v)) in iterator.enumerate() {

@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 use std::io::BufWriter;
 use crc::{Hasher32, crc32};
 use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Footer},
@@ -6,8 +7,8 @@ use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Foot
 use slice::{ByteWrite, Bytes, BytesMut};
 use slice;
 
-pub struct TableBuilder {
-    writer: TableWriter<BufWriter<fs::File>>,
+pub struct TableBuilder<T: Write> {
+    writer: TableWriter<T>,
     data_block: BlockBuilder,
     index_block: BlockBuilder,
     filter_block: Option<u64>, // FIX
@@ -18,17 +19,21 @@ pub struct TableBuilder {
 
 pub const TRAILER_SIZE: usize = 5;
 
-impl TableBuilder {
-    pub fn new(fname: &str) -> Self {
-        debug!("Open file {:?} for table", fname);
-        let fd = fs::OpenOptions::new() // add read permission?
-            .write(true)
-            .create(true)
-            .open(fname)
-            .unwrap();
+pub fn new(fname: &str) -> TableBuilder<BufWriter<fs::File>> {
+    debug!("Open file {:?} for table", fname);
+    let fd = fs::OpenOptions::new() // add read permission?
+        .write(true)
+        .create(true)
+        .open(fname)
+        .unwrap();
 
+    TableBuilder::new(BufWriter::new(fd))
+}
+
+impl<T: Write> TableBuilder<T> {
+    pub fn new(w: T) -> Self {
         Self {
-            writer: TableWriter::new(BufWriter::new(fd)),
+            writer: TableWriter::new(w),
             data_block: BlockBuilder::new(),
             index_block: BlockBuilder::new(),
             pending_handle: BlockHandle::new(),

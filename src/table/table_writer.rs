@@ -1,6 +1,6 @@
 use std::io;
 
-pub struct TableWriter<T: io::Write> {
+pub struct TableWriter<T> {
     inner: T,
     offset: usize,
 }
