@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use filename;
-use super::table::Table;
+use super::table;
 use bytes::Bytes;
+use memmap::Mmap;
 
 pub struct TableCache {
     cache: HashMap<u64, TableAndFile>, // TODO: use more smart cache
@@ -9,7 +10,7 @@ pub struct TableCache {
 }
 
 pub struct TableAndFile {
-    table: Table,
+    table: table::Table<Mmap>,
     // file?
 }
 
@@ -26,14 +27,14 @@ impl TableCache {
         table.get(key)
     }
 
-    pub fn find_or_create_table(&mut self, file_number: u64, size: u64) -> &mut Table {
+    pub fn find_or_create_table(&mut self, file_number: u64, size: u64) -> &mut table::Table<Mmap> {
         let db_name = &self.db_name;
         &mut self.cache
             .entry(file_number)
             .or_insert_with(|| {
                 let name = filename::FileType::Table(db_name, file_number).filename();
                 TableAndFile {
-                    table: Table::open(&name, size),
+                    table: table::open(&name, size),
                 }
             })
             .table

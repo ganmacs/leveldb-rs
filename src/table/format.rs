@@ -2,6 +2,7 @@ use std::io;
 use slice::{ByteRead, ByteWrite, Bytes, BytesMut};
 use super::{Compression, block::Block};
 use super::table_builder::TRAILER_SIZE;
+use std::ops::Deref;
 
 // TABLE_MAGIC_NUMBER was picked by running
 //    echo http://code.google.com/p/leveldb/ | sha1sum
@@ -109,6 +110,25 @@ pub fn read_block<T: io::Read + io::Seek>(
     let block_size = block_handle.size() as usize;
     let mut buff = vec![0; TRAILER_SIZE + block_size];
     reader.read(&mut buff);
+
+    let mut slice = Bytes::from(buff);
+    let mut content = slice.read(block_size + 1);
+    let _crc = slice.read_u32();
+    // check crc
+
+    let v = content.read(block_size);
+    Some(match Compression::from(content[0]) {
+        Compression::No => Block::new(v),
+    })
+}
+
+pub fn read_block2<T: Deref<Target = [u8]>>(
+    reader: &T,
+    block_handle: &BlockHandle,
+) -> Option<Block> {
+    let offset = block_handle.offset() as usize;
+    let block_size = block_handle.size() as usize;
+    let buff = &reader[offset..offset + block_size + TRAILER_SIZE];
 
     let mut slice = Bytes::from(buff);
     let mut content = slice.read(block_size + 1);
