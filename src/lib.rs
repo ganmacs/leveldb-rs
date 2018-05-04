@@ -23,6 +23,7 @@ mod table;
 mod leveldb;
 mod slice;
 mod configure;
+mod random_access_file;
 
 pub use batch::WriteBatch;
 pub use leveldb::open;
