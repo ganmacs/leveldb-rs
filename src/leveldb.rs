@@ -11,6 +11,7 @@ use log_record::{LogReader, LogWriter};
 use version::{VersionEdit, VersionSet};
 use configure;
 use table;
+use random_access_file::MmapRandomAccessFile;
 
 pub fn open(dir: &str) -> LevelDB {
     env_logger::init();
@@ -53,7 +54,7 @@ pub struct LevelDB {
     mem: MemDB,
     imm: Option<MemDB>,
     log_nubmer: u64,
-    table_cache: table::TableCache,
+    table_cache: table::TableCache<MmapRandomAccessFile>,
     configure: configure::Configure,
     // Should have log file?
 }

@@ -2,7 +2,7 @@ use std::io;
 use slice::{ByteRead, ByteWrite, Bytes, BytesMut};
 use super::{Compression, block::Block};
 use super::table_builder::TRAILER_SIZE;
-use std::ops::Deref;
+use random_access_file::RandomAccessFile;
 
 // TABLE_MAGIC_NUMBER was picked by running
 //    echo http://code.google.com/p/leveldb/ | sha1sum
@@ -122,23 +122,28 @@ pub fn read_block<T: io::Read + io::Seek>(
     })
 }
 
-pub fn read_block2<T: Deref<Target = [u8]>>(
-    reader: &T,
-    block_handle: &BlockHandle,
-) -> Option<Block> {
-    let offset = block_handle.offset() as usize;
+pub fn read_block2<T: RandomAccessFile>(reader: &T, block_handle: &BlockHandle) -> Option<Block> {
     let block_size = block_handle.size() as usize;
-    let buff = &reader[offset..offset + block_size + TRAILER_SIZE];
+    let slice = reader
+        .read(block_handle.offset() as usize, block_size + TRAILER_SIZE)
+        .map(|b| Bytes::from(b));
 
-    let mut slice = Bytes::from(buff);
-    let mut content = slice.read(block_size + 1);
-    let _crc = slice.read_u32();
-    // check crc
+    match slice {
+        Ok(mut b) => {
+            let mut content = b.read(block_size + 1);
+            let _crc = b.read_u32();
+            // check crc
 
-    let v = content.read(block_size);
-    Some(match Compression::from(content[0]) {
-        Compression::No => Block::new(v),
-    })
+            let v = content.read(block_size);
+            Some(match Compression::from(content[0]) {
+                Compression::No => Block::new(v),
+            })
+        }
+        Err(e) => {
+            error!("{:?}", e);
+            None
+        }
+    }
 }
 
 #[cfg(test)]

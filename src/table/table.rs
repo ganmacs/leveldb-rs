@@ -1,23 +1,14 @@
-use std::fs;
 use std::sync::Arc;
-use std::ops::Deref;
-use memmap::{Mmap, MmapOptions};
 
 use super::format::{Footer, FOOTER_MAX_LENGTH};
 use super::{block, format};
 use super::block::{Block, BlockIterator};
 use slice::Bytes;
+use random_access_file::RandomAccessFile;
 
 pub struct Table<T> {
     index_block: Block,
     inner: Arc<T>,
-}
-
-pub fn open(fname: &str, file_size: u64) -> Table<Mmap> {
-    debug!("Open Table file {:?} for read", fname);
-    let file = fs::OpenOptions::new().read(true).open(fname).unwrap();
-    let mmap = unsafe { MmapOptions::new().map(&file).expect("memmap failed") };
-    Table::open(file_size as usize, mmap)
 }
 
 impl<T> Table<T> {
@@ -30,14 +21,17 @@ impl<T> Table<T> {
     }
 }
 
-impl<T: Deref<Target = [u8]>> Table<T> {
+impl<T: RandomAccessFile> Table<T> {
     pub fn open(size: usize, inner: T) -> Self {
         if FOOTER_MAX_LENGTH > size {
             error!("Size is too samll {:?} for footer", size);
         }
 
-        let offset = size - FOOTER_MAX_LENGTH;
-        let footer = Footer::decode(&inner[offset..offset + FOOTER_MAX_LENGTH]);
+        let footer = inner
+            .read(size - FOOTER_MAX_LENGTH, FOOTER_MAX_LENGTH)
+            .map(|v| Footer::decode(v))
+            .unwrap();
+
         println!(
             "Read footer data index_block(offset={:?}, size={:?}), metaindex(offset={:?}, size={:?})",
             footer.index_block_handle.offset(),
@@ -65,16 +59,37 @@ impl<T: Deref<Target = [u8]>> Table<T> {
     }
 }
 
+pub struct TableIterator<T> {
+    index_block: BlockIterator,
+    data_block: Option<BlockIterator>,
+    inner: Arc<T>,
+}
+
+impl<T: RandomAccessFile> Iterator for TableIterator<T> {
+    type Item = (Bytes, Bytes);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.data_block
+            .as_mut()
+            .and_then(|dblock| dblock.next())
+            .or(self.index_block.next().and_then(|(_, index_value)| {
+                self.data_block = Some(block::read2(&*self.inner, &index_value).iter());
+                self.data_block.as_mut().and_then(|block| block.next())
+            }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use super::super::table_builder::TableBuilder;
+    use random_access_file::RandomAccessFile;
     use std::io::{BufWriter, Cursor};
     use bytes::Bytes;
 
-    fn built_table_value(size: usize) -> (Vec<u8>, Vec<(Bytes, Bytes)>) {
+    fn built_table_value() -> (Vec<u8>, Vec<(Bytes, Bytes)>) {
         let mut value: Vec<u8> = vec![];
-        let dic: Vec<(Bytes, Bytes)> = (0..size)
+        let dic: Vec<(Bytes, Bytes)> = (0..30)
             .into_iter()
             .map(|v| {
                 (
@@ -96,13 +111,44 @@ mod tests {
         (value, dic)
     }
 
+    struct TestRandomAccessFile {
+        inner: Vec<u8>,
+    }
+
+    impl RandomAccessFile for TestRandomAccessFile {
+        fn open(fname: &str) -> Self {
+            let (v, _) = built_table_value();
+            TestRandomAccessFile { inner: v }
+        }
+
+        fn read(&self, offset: usize, size: usize) -> Result<&[u8], String> {
+            let lim = offset + size;
+            if lim > self.inner.len() {
+                Err("invalid index".to_owned())
+            } else {
+                Ok(&self.inner[offset..lim])
+            }
+        }
+    }
+
     #[test]
     fn test_table() {
-        let (value, dic) = built_table_value(30);
-        let t = Table::open(value.len(), value);
+        let (value, dic) = built_table_value();
+        let t = Table::open(value.len(), TestRandomAccessFile::open("dummy"));
 
         for (k, v) in dic {
             assert_eq!(Some(v), t.get(&k))
+        }
+    }
+
+    #[test]
+    fn test_table_iter() {
+        let (value, dic) = built_table_value();
+        let titer = Table::open(value.len(), TestRandomAccessFile::open("dummy")).iter();
+
+        for (t, d) in titer.zip(&dic) {
+            assert_eq!(t.0, d.0);
+            assert_eq!(t.1, d.1);
         }
     }
 }

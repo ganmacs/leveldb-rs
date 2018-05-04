@@ -1,7 +1,7 @@
 use std::io;
 use slice::{ByteRead, Bytes, U32_BYTE_SIZE};
 use super::format;
-use std::ops::Deref;
+use random_access_file::RandomAccessFile;
 
 #[derive(Debug)]
 pub struct Block {
@@ -16,7 +16,7 @@ pub fn read<T: io::Read + io::Seek>(reader: &mut T, bh_value: &Bytes) -> Block {
     block
 }
 
-pub fn read2<T: Deref<Target = [u8]>>(inner: &T, bh_value: &Bytes) -> Block {
+pub fn read2<T: RandomAccessFile>(inner: &T, bh_value: &Bytes) -> Block {
     let bh = format::BlockHandle::decode_from(&mut bh_value.clone());
     let block = format::read_block2(inner, &bh).expect("block ga!!!!");
     block
