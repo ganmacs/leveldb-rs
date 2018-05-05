@@ -4,7 +4,7 @@ extern crate rand;
 use std::iter::Iterator;
 mod skiplist;
 use ikey::{InternalKey, KeyKind};
-use slice::{ByteRead, ByteWrite, Bytes};
+use slice::{ByteRead, ByteWrite, Bytes, U64_BYTE_SIZE};
 use comparator::InternalKeyComparator;
 
 pub struct MemDB {
@@ -28,19 +28,15 @@ impl MemDB {
 
     pub fn get(&self, key: &InternalKey) -> Option<Bytes> {
         let k = key.memtable_key();
-        println!("Get {:?} from memdb", k);
+        debug!("Get {:?} from memdb", k);
         self.inner.seek(&k).and_then(|mut v| {
             let key_size = v.read_u32();
-            let ikey = v.read(key_size as usize);
+            let ikey = v.read(key_size as usize - U64_BYTE_SIZE);
             let seq_kind = v.read_u64();
             let kind = KeyKind::from((seq_kind & 1) as u8);
 
             match (kind, key.user_key() == ikey) {
-                (KeyKind::Value, true) => {
-                    let value_size = v.read_u32();
-                    let value = v.read(value_size as usize);
-                    Some(value)
-                }
+                (KeyKind::Value, true) => Some(get_length_prefixed_key(&mut v)),
                 _ => None,
             }
         })
@@ -52,8 +48,7 @@ impl MemDB {
             .expect("can't convert bytes to mutable bytes");
         v.write_u32(value.len() as u32);
         v.write(value);
-
-        println!("Set {:?} to memdb", v);
+        debug!("Set {:?} to memdb", v);
         self.inner.insert(v.freeze())
     }
 
@@ -73,14 +68,16 @@ impl<'a> Iterator for MemDBIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|mut v| {
-            let key_size = v.read_u32();
-            let key = v.read(key_size as usize);
-            let _ = v.read_u64(); // seq
-
-            let value_size = v.read_u32();
-            (key, v.read(value_size as usize))
+            let k = get_length_prefixed_key(&mut v);
+            let v = get_length_prefixed_key(&mut v);
+            (k, v)
         })
     }
+}
+
+fn get_length_prefixed_key(v: &mut Bytes) -> Bytes {
+    let size = v.read_u32() as usize;
+    v.read(size)
 }
 
 #[cfg(test)]
@@ -88,7 +85,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_memdb() {
+    fn memdb() {
         let mut db = MemDB::new();
 
         let hash = vec![
@@ -113,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn test_skiplist_iter() {
+    fn skiplist_iter() {
         let mut db = MemDB::new();
 
         let hash: Vec<(&str, Bytes)> = vec![
@@ -135,7 +132,8 @@ mod tests {
 
         let mut it = db.iter();
         for v in hash.into_iter() {
-            assert_eq!(it.next().unwrap(), (Bytes::from(v.0), v.1));
+            let expected_key = Bytes::from(format!("{}\x02\0\0\0\0\0\0\0", v.0).as_bytes());
+            assert_eq!(it.next().unwrap(), (expected_key, v.1));
         }
     }
 }
