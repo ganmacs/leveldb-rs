@@ -69,16 +69,6 @@ impl AsRef<[u8]> for InternalKey {
     }
 }
 
-fn make_key(user_key: &[u8], seq: u64, kind: KeyKind) -> Bytes {
-    let size = user_key.len();
-    let mut bytes = BytesMut::with_capacity(UKEY_LENGTH + size + SEQ_LENGTH);
-    bytes.write_u32(size as u32);
-    bytes.write_slice(user_key);
-    bytes.write_u64(seq << 1 | kind as u64);
-    debug!("key is {:?}", bytes);
-    bytes.freeze()
-}
-
 impl InternalKey {
     pub fn from(inner: Bytes) -> Self {
         InternalKey { inner }
@@ -86,19 +76,19 @@ impl InternalKey {
 
     pub fn new_with_kind(user_key: &[u8], seq: u64, kind: KeyKind) -> Self {
         InternalKey {
-            inner: make_key(user_key, seq, kind),
+            inner: InternalKey::make_key(user_key, seq, kind),
         }
     }
 
     pub fn new(user_key: &[u8], seq: u64) -> Self {
         InternalKey {
-            inner: make_key(user_key, seq, KeyKind::Value),
+            inner: InternalKey::make_key(user_key, seq, KeyKind::Value),
         }
     }
 
     pub fn new_delete_key(user_key: &[u8], seq: u64) -> Self {
         InternalKey {
-            inner: make_key(user_key, seq, KeyKind::Delete),
+            inner: InternalKey::make_key(user_key, seq, KeyKind::Delete),
         }
     }
 
@@ -107,12 +97,11 @@ impl InternalKey {
     }
 
     pub fn user_key(&self) -> Bytes {
-        self.inner.gets(UKEY_LENGTH, self.key_size())
+        self.inner.gets(UKEY_LENGTH, self.key_size() - SEQ_LENGTH)
     }
 
     pub fn memtable_key(&self) -> Bytes {
-        self.inner
-            .gets(0, self.key_size() + UKEY_LENGTH + SEQ_LENGTH)
+        self.inner.gets(0, self.key_size() + UKEY_LENGTH)
     }
 
     pub fn seq_number(&self) -> usize {
@@ -128,11 +117,23 @@ impl InternalKey {
     }
 
     fn compacted_seq_kind(&self) -> u64 {
-        self.inner.get_u64(self.key_size() + UKEY_INDEX)
+        self.inner
+            .get_u64(UKEY_INDEX + self.key_size() - SEQ_LENGTH)
     }
 
     fn key_size(&self) -> usize {
         self.inner.get_u32(0) as usize
+    }
+
+    fn make_key(user_key: &[u8], seq: u64, kind: KeyKind) -> Bytes {
+        // U64_BYTE_SIZE is for seq and kind size
+        let key_size = user_key.len() + SEQ_LENGTH;
+        let mut bytes = BytesMut::with_capacity(UKEY_LENGTH + key_size + SEQ_LENGTH);
+        bytes.write_u32(key_size as u32);
+        bytes.write_slice(user_key);
+        bytes.write_u64(seq << 1 | kind as u64);
+        debug!("key is {:?}", bytes);
+        bytes.freeze()
     }
 }
 
@@ -141,12 +142,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_internal_key() {
+    fn internal_key() {
         let ikey = InternalKey::new(&Bytes::from("hoge"), 2);
         assert_eq!(ikey.user_key(), "hoge");
         assert_eq!(
             ikey.memtable_key(),
-            Bytes::from("\x04\0\0\0hoge\x04\0\0\0\0\0\0\0")
+            Bytes::from("\x0c\0\0\0hoge\x04\0\0\0\0\0\0\0")
         );
         assert_eq!(ikey.seq_number(), 2);
     }
