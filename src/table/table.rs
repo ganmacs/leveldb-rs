@@ -72,10 +72,12 @@ impl<T: RandomAccessFile> Iterator for TableIterator<T> {
         self.data_block
             .as_mut()
             .and_then(|dblock| dblock.next())
-            .or(self.index_block.next().and_then(|(_, index_value)| {
-                self.data_block = Some(block::read2(&*self.inner, &index_value).iter());
-                self.data_block.as_mut().and_then(|block| block.next())
-            }))
+            .or_else(|| {
+                self.index_block.next().and_then(|(_, index_value)| {
+                    self.data_block = Some(block::read2(&*self.inner, &index_value).iter());
+                    self.data_block.as_mut().and_then(|block| block.next())
+                })
+            })
     }
 }
 
