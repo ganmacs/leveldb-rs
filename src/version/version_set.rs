@@ -235,7 +235,7 @@ impl Version {
             if i == 0 {
                 if self.files[0].len() != 0 {
                     for file in &self.files[0] {
-                        if ukey <= file.largest() && ukey >= file.smallest() {
+                        if ukey <= file.largest.user_key() && ukey >= file.smallest.user_key() {
                             debug!("{:?} is found in level 0 file", ukey);
                             meta_files.push(file);
                         }
