@@ -4,7 +4,7 @@ extern crate rand;
 use std::iter::Iterator;
 mod skiplist;
 use ikey::{InternalKey, KeyKind};
-use slice::{ByteRead, ByteWrite, Bytes, U64_BYTE_SIZE};
+use slice::{ByteRead, ByteWrite, Bytes, U32_BYTE_SIZE, U64_BYTE_SIZE};
 use comparator::InternalKeyComparator;
 
 pub struct MemDB {
@@ -68,7 +68,9 @@ impl<'a> Iterator for MemDBIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|mut v| {
-            let k = get_length_prefixed_key(&mut v);
+            // To get length of key
+            let size = v.get_u32(0) as usize;
+            let k = v.read(size + U32_BYTE_SIZE);
             let v = get_length_prefixed_key(&mut v);
             (k, v)
         })
@@ -110,30 +112,47 @@ mod tests {
     }
 
     #[test]
-    fn skiplist_iter() {
+    fn memdb_iter() {
         let mut db = MemDB::new();
 
-        let hash: Vec<(&str, Bytes)> = vec![
-            ("key", Bytes::from("value")),
-            ("key1", Bytes::from("value1")),
-            ("key2", Bytes::from("value2")),
-            ("key3", Bytes::from("value3")),
-            ("key4", Bytes::from("value4")),
-            ("key5", Bytes::from("value5")),
-            ("key6", Bytes::from("value___6")),
-            ("key77", Bytes::from("value   7")),
+        let hash: Vec<(InternalKey, Bytes)> = vec![
+            (InternalKey::new("key".as_bytes(), 1), Bytes::from("value")),
+            (
+                InternalKey::new("key1".as_bytes(), 1),
+                Bytes::from("value1"),
+            ),
+            (
+                InternalKey::new("key2".as_bytes(), 1),
+                Bytes::from("value2"),
+            ),
+            (
+                InternalKey::new("key3".as_bytes(), 1),
+                Bytes::from("value3"),
+            ),
+            (
+                InternalKey::new("key4".as_bytes(), 1),
+                Bytes::from("value4"),
+            ),
+            (
+                InternalKey::new("key5".as_bytes(), 1),
+                Bytes::from("value5"),
+            ),
+            (
+                InternalKey::new("key6".as_bytes(), 1),
+                Bytes::from("value___6"),
+            ),
+            (
+                InternalKey::new("key77".as_bytes(), 1),
+                Bytes::from("value   7"),
+            ),
         ];
-
         for v in &hash.clone() {
-            let key_bytes = v.0.as_bytes();
-            let k = InternalKey::new(key_bytes, 1);
-            db.add(&k, &v.1);
+            db.add(&v.0, &v.1);
         }
 
         let mut it = db.iter();
         for v in hash.into_iter() {
-            let expected_key = Bytes::from(format!("{}\x02\0\0\0\0\0\0\0", v.0).as_bytes());
-            assert_eq!(it.next().unwrap(), (expected_key, v.1));
+            assert_eq!(it.next().unwrap(), (v.0.inner(), v.1));
         }
     }
 }
