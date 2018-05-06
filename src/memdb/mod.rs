@@ -36,7 +36,7 @@ impl MemDB {
             let kind = KeyKind::from((seq_kind & 1) as u8);
 
             match (kind, key.user_key() == ikey) {
-                (KeyKind::Value, true) => Some(get_length_prefixed_key(&mut v)),
+                (KeyKind::Value, true) => Some(get_length_prefixed_key(&v)),
                 _ => None,
             }
         })
@@ -71,15 +71,17 @@ impl<'a> Iterator for MemDBIterator<'a> {
             // To get length of key
             let size = v.get_u32(0) as usize;
             let k = v.read(size + U32_BYTE_SIZE);
-            let v = get_length_prefixed_key(&mut v);
+            let v = get_length_prefixed_key(&v);
             (k, v)
         })
     }
 }
 
-fn get_length_prefixed_key(v: &mut Bytes) -> Bytes {
-    let size = v.read_u32() as usize;
-    v.read(size)
+fn get_length_prefixed_key(v: &Bytes) -> Bytes {
+    let size = v.get_u32(0) as usize;
+    v.gets(U32_BYTE_SIZE, size)
+}
+
 }
 
 #[cfg(test)]
