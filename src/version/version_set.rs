@@ -4,6 +4,7 @@ use std::io::Read;
 use std::io::BufReader;
 use std::io::BufWriter;
 use bytes::Bytes;
+use random_access_file::RandomAccessFile;
 
 use log_record::{LogReader, LogWriter};
 use filename;
@@ -225,7 +226,11 @@ impl Version {
     }
 
     // name(cache) is correct?
-    pub fn get(&self, key: &ikey::InternalKey, cache: &mut table::TableCache) -> Option<Bytes> {
+    pub fn get<T: RandomAccessFile>(
+        &self,
+        key: &ikey::InternalKey,
+        cache: &mut table::TableCache<T>,
+    ) -> Option<Bytes> {
         let ukey = key.user_key();
 
         for i in 0..LEVEL {
