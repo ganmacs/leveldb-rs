@@ -5,16 +5,16 @@ use std::iter::Iterator;
 mod skiplist;
 use ikey::{InternalKey, KeyKind};
 use slice::{ByteRead, ByteWrite, Bytes, U32_BYTE_SIZE, U64_BYTE_SIZE};
-use comparator::InternalKeyComparator;
+use comparator::{Comparator, InternalKeyComparator};
 
 pub struct MemDB {
-    inner: skiplist::SkipList<InternalKeyComparator>,
+    inner: skiplist::SkipList<KeyComparator>,
 }
 
 impl MemDB {
     pub fn new() -> Self {
         MemDB {
-            inner: skiplist::SkipList::new(InternalKeyComparator),
+            inner: skiplist::SkipList::new(KeyComparator(InternalKeyComparator)),
         }
     }
 
@@ -60,7 +60,7 @@ impl MemDB {
 }
 
 pub struct MemDBIterator<'a> {
-    inner: skiplist::SkipListIterator<'a, InternalKeyComparator>,
+    inner: skiplist::SkipListIterator<'a, KeyComparator>,
 }
 
 impl<'a> Iterator for MemDBIterator<'a> {
@@ -82,6 +82,14 @@ fn get_length_prefixed_key(v: &Bytes) -> Bytes {
     v.gets(U32_BYTE_SIZE, size)
 }
 
+pub struct KeyComparator(InternalKeyComparator);
+
+use std::cmp::Ordering;
+impl Comparator for KeyComparator {
+    fn compare(&self, a: &Bytes, b: &Bytes) -> Ordering {
+        self.0
+            .compare(&get_length_prefixed_key(&a), &get_length_prefixed_key(&b))
+    }
 }
 
 #[cfg(test)]
@@ -111,6 +119,18 @@ mod tests {
         }
 
         assert_eq!(db.get(&InternalKey::new(b"notfound", 0)), None);
+    }
+
+    #[test]
+    fn memdb_seqeunce() {
+        let mut db = MemDB::new();
+        let key = "key1".as_bytes();
+        let value = Bytes::from("value1");
+
+        db.add(&InternalKey::new(key, 10), &value);
+        assert_eq!(db.get(&InternalKey::new(key, 9)), Some(value.clone()));
+        assert_eq!(db.get(&InternalKey::new(key, 10)), Some(value));
+        assert_eq!(db.get(&InternalKey::new(key, 11)), None);
     }
 
     #[test]
