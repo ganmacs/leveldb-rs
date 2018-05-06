@@ -132,7 +132,6 @@ impl InternalKey {
         bytes.write_u32(key_size as u32);
         bytes.write_slice(user_key);
         bytes.write_u64(seq << 1 | kind as u64);
-        debug!("key is {:?}", bytes);
         bytes.freeze()
     }
 }

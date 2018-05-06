@@ -90,7 +90,6 @@ impl LevelDB {
     }
 
     pub fn set(&mut self, key: &str, value: &str) -> Result<(), String> {
-        debug!("Set key={:?}, value={:?}", key, value);
         let mut b = WriteBatch::new();
         b.put(key, value);
         self.apply(b)

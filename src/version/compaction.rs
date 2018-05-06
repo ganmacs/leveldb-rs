@@ -145,7 +145,6 @@ mod tests {
         let actuals = MergeingIterator::new(v);
 
         for (e, a) in expecteds.zip(actuals) {
-            println!("{:?} {:?}", e, a);
             assert_eq!(e, a);
         }
     }
