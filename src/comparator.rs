@@ -14,8 +14,8 @@ impl Comparator for InternalKeyComparator {
             Ordering::Equal => {
                 let a_s = a.len();
                 let b_s = b.len();
-                LittleEndian::read_u64(&a[b_s - 8..b_s])
-                    .cmp(&LittleEndian::read_u64(&b[a_s - 8..a_s]))
+                LittleEndian::read_u64(&a[a_s - 8..a_s])
+                    .cmp(&LittleEndian::read_u64(&b[b_s - 8..b_s]))
             }
             t => t,
         }
@@ -34,13 +34,20 @@ mod tests {
 
     #[test]
     fn internal_key_comparator() {
-        let v0 = InternalKey::new(&Bytes::from("aaa"), 1).memtable_key();
-        let v1 = InternalKey::new(&Bytes::from("aaa"), 1).memtable_key();
-        let v2 = InternalKey::new(&Bytes::from("aaa"), 2).memtable_key();
-        let v3 = InternalKey::new(&Bytes::from("aab"), 1).memtable_key();
+        let v0 = InternalKey::new(&Bytes::from("key1"), 10).memtable_key();
 
-        assert_eq!(InternalKeyComparator.compare(&v0, &v1), Ordering::Equal);
-        assert_eq!(InternalKeyComparator.compare(&v0, &v2), Ordering::Less);
-        assert_eq!(InternalKeyComparator.compare(&v0, &v3), Ordering::Less);
+        let v10 = InternalKey::new(&Bytes::from("key1"), 10).memtable_key();
+        let v11 = InternalKey::new(&Bytes::from("key1"), 1).memtable_key();
+        let v12 = InternalKey::new(&Bytes::from("key1"), 11).memtable_key();
+        assert_eq!(InternalKeyComparator.compare(&v0, &v10), Ordering::Equal);
+        assert_eq!(InternalKeyComparator.compare(&v0, &v11), Ordering::Greater);
+        assert_eq!(InternalKeyComparator.compare(&v0, &v12), Ordering::Less);
+
+        let v20 = InternalKey::new(&Bytes::from("key0"), 10).memtable_key();
+        let v21 = InternalKey::new(&Bytes::from("key00"), 10).memtable_key();
+        let v22 = InternalKey::new(&Bytes::from("key10"), 10).memtable_key();
+        assert_eq!(InternalKeyComparator.compare(&v0, &v20), Ordering::Greater);
+        assert_eq!(InternalKeyComparator.compare(&v0, &v21), Ordering::Less);
+        assert_eq!(InternalKeyComparator.compare(&v0, &v22), Ordering::Less);
     }
 }
