@@ -72,16 +72,13 @@ impl<T: Comparator> SkipList<T> {
 
         while level > 0 {
             next = &self.index[sv.next(level - 1)];
-            if next.id == self.head().id {
+            if next.id != self.head().id
+                && self.cmp.compare(key, &self.load(&next)) == Ordering::Greater
+            {
+                sv = next;
+            } else {
                 prev.as_mut().map(|p| p[level - 1] = sv.id);
                 level -= 1;
-            } else {
-                if self.cmp.compare(key, &self.load(&next)) == Ordering::Greater {
-                    sv = next;
-                } else {
-                    prev.as_mut().map(|p| p[level - 1] = sv.id);
-                    level -= 1;
-                }
             }
         }
         next
