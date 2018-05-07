@@ -223,9 +223,9 @@ impl LevelDB {
     pub fn apply(&mut self, mut batch: WriteBatch) -> Result<(), String> {
         self.make_room_for_write(true)?; // for debug
 
-        let seq = self.versions.last_sequence + 1;
-        batch.set_seq(seq);
-        self.versions.set_last_sequence(seq);
+        let seq = self.versions.last_sequence;
+        batch.set_seq(seq + 1);
+        self.versions.set_last_sequence(seq + batch.count() as u64);
 
         self.log.as_mut().map(|l| l.add_record(batch.data()));
 
