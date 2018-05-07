@@ -126,8 +126,8 @@ impl LevelDB {
             }
         }
 
-        edit.next_file_number = self.versions.next_file_num();
-        self.log_nubmer = edit.next_file_number;
+        edit.log_number = self.versions.next_file_num();
+        self.log_nubmer = edit.log_number;
         let fname = filename::FileType::Log(&self.dbname, self.log_nubmer).filename();
         debug!("Use log file {:?}", fname);
         self.log = Some(
