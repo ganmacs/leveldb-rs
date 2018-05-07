@@ -96,6 +96,10 @@ impl InternalKey {
         self.inner.clone()
     }
 
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
     pub fn user_key(&self) -> Bytes {
         self.inner.gets(UKEY_LENGTH, self.key_size() - SEQ_LENGTH)
     }

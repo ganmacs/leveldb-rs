@@ -1,8 +1,10 @@
-use byteorder::{ByteOrder, LittleEndian};
-use bytes::{BufMut, Bytes, BytesMut};
-use log_record::LogWriter;
 use std::io::Write;
+use bytes::BufMut;
+
+use log_record::LogWriter;
 use super::{FileMetaData, BLOCK_SIZE};
+use slice::{ByteRead, Bytes, BytesMut};
+use ikey::InternalKey;
 
 enum Tag {
     Comparator = 1,
@@ -55,32 +57,37 @@ impl VersionEdit {
     }
 
     pub fn decode_from(&mut self, record: Bytes) {
-        let mut i = 0;
-        let limit = record.len();
+        let mut input = record.clone(); // copy?
 
-        let val = record.slice(i, i + 1);
-        i += 1;
-        let t = val[0] as u8;
-
-        match Tag::from(t) {
-            Tag::CompactPointer => {}
-            Tag::LogNumber => {
-                let val = record.slice(i, i + 8);
-                i += 8;
-                let v = LittleEndian::read_u64(&val);
-                self.log_number = v
+        while input.len() > 0 {
+            let tag = input.read_u8();
+            match Tag::from(tag) {
+                Tag::LogNumber => self.log_number = input.read_u64(),
+                Tag::NextFileNumber => self.next_file_number = input.read_u64(),
+                Tag::LastSequence => self.last_sequence = input.read_u64(),
+                Tag::PrevLogNumber => self.prev_log_number = input.read_u64(),
+                Tag::CompactPointer => unimplemented!(),
+                Tag::Comparator => unimplemented!(),
+                Tag::DeletedFile => unimplemented!(),
+                Tag::NewFile => {
+                    let level = input.read_u64() as usize;
+                    let file_num = input.read_u64();
+                    let file_size = input.read_u64();
+                    let largest_size = input.read_u64() as usize;
+                    let largest = input.read(largest_size);
+                    let smallest_size = input.read_u64() as usize;
+                    let smallest = input.read(smallest_size);
+                    self.files.push((
+                        FileMetaData {
+                            file_num: file_num,
+                            file_size: file_size,
+                            largest: InternalKey::from(largest),
+                            smallest: InternalKey::from(smallest),
+                        },
+                        level,
+                    ));
+                }
             }
-            Tag::NextFileNumber => {
-                let val = record.slice(i, i + 8);
-                i += 8;
-                let v = LittleEndian::read_u64(&val);
-                self.next_file_number = v
-            }
-            Tag::LastSequence => {}
-            Tag::Comparator => {}
-            Tag::DeletedFile => {}
-            Tag::NewFile => {}
-            Tag::PrevLogNumber => {}
         }
     }
 
@@ -111,7 +118,10 @@ impl VersionEdit {
             res.put_u8(Tag::NewFile as u8);
             res.put_u64_le(*level as u64);
             res.put_u64_le(meta.file_num);
+            res.put_u64_le(meta.file_size);
+            res.put_u64_le(meta.largest().len() as u64);
             res.put_slice(meta.largest().as_ref());
+            res.put_u64_le(meta.smallest().len() as u64);
             res.put_slice(meta.smallest().as_ref());
         }
 
