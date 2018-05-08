@@ -25,14 +25,14 @@ impl<T> TableCache<T> {
 }
 
 impl<T: RandomAccessFile> TableCache<T> {
-    pub fn find_or_create_table(&mut self, file_number: u64, size: usize) -> &mut Table<T> {
+    pub fn find_or_create_table(&mut self, file_number: u64, size: u64) -> &mut Table<T> {
         let db_name = self.db_name.clone();
         &mut self.cache
             .entry(file_number)
             .or_insert_with(|| {
                 let name = filename::FileType::Table(&db_name, file_number).filename();
                 TableAndFile {
-                    table: Table::open(size, T::open(&name)),
+                    table: Table::open(size as usize, T::open(&name)),
                 }
             })
             .table
@@ -44,20 +44,11 @@ impl<T: RandomAccessFile> TableCache<T> {
     }
 
     pub fn get(&mut self, key: &Bytes, file_number: u64, size: u64) -> Option<Bytes> {
-        let table = self.find_or_create_table(file_number, size as usize);
+        let table = self.find_or_create_table(file_number, size);
         table.get(key)
     }
+
+    pub fn inner_iter(&mut self, file_number: u64, size: u64) -> TableIterator<T> {
+        self.find_or_create_table(file_number, size).iter()
+    }
 }
-
-pub struct TableCacheIter<T> {
-    inner: TableIterator<T>,
-}
-
-// impl Iterator for TableCacheIter {
-//     type Item = Bytes;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-
-//         // self.read_record()
-//     }
-// }
