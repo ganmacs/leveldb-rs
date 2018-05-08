@@ -1,8 +1,9 @@
 extern crate bytes;
 extern crate rand;
 
-use std::iter::Iterator;
 mod skiplist;
+
+use std::iter::Iterator;
 use ikey::{InternalKey, KeyKind};
 use slice::{ByteRead, ByteWrite, Bytes, U32_BYTE_SIZE, U64_BYTE_SIZE};
 use comparator::{Comparator, InternalKeyComparator};
