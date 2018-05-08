@@ -178,4 +178,23 @@ mod tests {
             assert_eq!(it.next().unwrap(), (v.0.inner(), v.1));
         }
     }
+
+    #[test]
+    fn memdb_iter_is_desc_order() {
+        let mut db = MemDB::new();
+        let hash: Vec<(InternalKey, Bytes)> = vec![
+            (InternalKey::new("key01".as_bytes(), 1), Bytes::from("v")),
+            (InternalKey::new("key00".as_bytes(), 2), Bytes::from("v")),
+            (InternalKey::new("key00".as_bytes(), 1), Bytes::from("v")),
+        ];
+
+        for v in &hash.clone() {
+            db.add(&v.0, &v.1);
+        }
+
+        let mut it = db.iter();
+        assert_eq!(it.next().unwrap().0, hash[2].0);
+        assert_eq!(it.next().unwrap().0, hash[1].0);
+        assert_eq!(it.next().unwrap().0, hash[0].0);
+    }
 }
