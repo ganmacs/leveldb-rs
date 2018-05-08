@@ -77,6 +77,7 @@ impl LevelDB {
         let snapshot = self.versions.last_sequence;
         let ikey = InternalKey::new(key.as_bytes(), snapshot);
 
+        debug!("snapshot id: {:}", snapshot);
         let ret = self.mem
             .get(&ikey)
             .or_else(|| self.imm.as_ref().and_then(|v| v.get(&ikey)));
@@ -268,6 +269,7 @@ impl LevelDB {
 
     fn compact_memtable(&mut self) {
         if let Some(mem) = mem::replace(&mut self.imm, None) {
+            debug!("Start memtable compactoin");
             let mut edit = VersionEdit::new(0);
             if let Err(msg) = self.write_level0_table(&mut edit, &mut mem.iter()) {
                 self.imm = Some(mem); // put it back

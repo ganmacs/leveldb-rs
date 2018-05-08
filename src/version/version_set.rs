@@ -176,8 +176,6 @@ impl VersionSet {
             self.next_file_number,
             self.last_sequence
         );
-
-        debug!("recoverd current version");
     }
 
     pub fn mark_file_num_used(&mut self, num: u64) {

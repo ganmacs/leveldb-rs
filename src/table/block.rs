@@ -37,7 +37,10 @@ impl Block {
             size - ((b.restart_count() + 1) * U32_BYTE_SIZE)
         };
 
-        debug!("restart_offset={:?}, size={:?}", b.restart_offset, b.size);
+        debug!(
+            "new block restart_offset={:?}, size={:?}",
+            b.restart_offset, b.size
+        );
         b
     }
 
@@ -66,8 +69,8 @@ pub struct BlockIterator {
 impl BlockIterator {
     pub fn new(inner: Bytes, restart_offset: usize, restart_num: usize) -> Self {
         debug!(
-            "inner={:?}, restart_offset={:?}, restart_num={:?}",
-            inner, restart_offset, restart_num
+            "new blockiterator restart_offset={:?}, restart_num={:?}",
+            restart_offset, restart_num
         );
         Self {
             inner,
@@ -141,7 +144,6 @@ impl BlockIterator {
         };
 
         let v = self.inner.gets(next_offset + not_shared, value_length);
-        debug!("key={:?}, value={:?}", k, v);
 
         self.key = Some(k);
         self.value = Some(v);

@@ -32,7 +32,7 @@ impl<T: RandomAccessFile> Table<T> {
             .map(|v| Footer::decode(v))
             .unwrap();
 
-        println!(
+        debug!(
             "Read footer data index_block(offset={:?}, size={:?}), metaindex(offset={:?}, size={:?})",
             footer.index_block_handle.offset(),
             footer.index_block_handle.size(),
