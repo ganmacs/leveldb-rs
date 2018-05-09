@@ -28,7 +28,7 @@ impl<T: Comparator> SkipList<T> {
     }
 
     pub fn empty(&self) -> bool {
-        self.data.len() == 0
+        self.data_usage() == 0
     }
 
     pub fn seek(&self, key: &Bytes) -> Option<Bytes> {
