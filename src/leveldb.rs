@@ -269,11 +269,16 @@ impl LevelDB {
 
     fn compact_memtable(&mut self) {
         if let Some(mem) = mem::replace(&mut self.imm, None) {
+            if mem.empty() {
+                debug!("Skip to compact memtable since memtable is empty");
+                return;
+            }
+
             debug!("Start memtable compactoin");
             let mut edit = VersionEdit::new(0);
             if let Err(msg) = self.write_level0_table(&mut edit, &mut mem.iter()) {
                 self.imm = Some(mem); // put it back
-                error!("Failed to write_level0_table {:?}", msg);
+                error!("during compaction, write_level0_table is failed: {:?}", msg);
                 return;
             };
 
