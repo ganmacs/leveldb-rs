@@ -96,7 +96,7 @@ impl VersionSet {
         if let Some(current_version) = self.current() {
             for i in 0..LEVEL {
                 for meta in current_version.files[i].iter() {
-                    edit.add_file(meta.clone(), i);
+                    edit.add_file(meta.clone());
                 }
             }
         }
@@ -276,8 +276,9 @@ impl VersionBuilder {
     }
 
     pub fn apply(&mut self, edit: &VersionEdit) {
-        for &(ref meta, ref level) in edit.files() {
-            self.added[*level].push(meta.clone());
+        for meta in edit.files() {
+            self.added[meta.level as usize].push(meta.clone());
+        }
         }
     }
 

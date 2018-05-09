@@ -216,7 +216,7 @@ impl LevelDB {
             debug!("Skip adding table file to edit version, because file size is 0");
         } else {
             debug!("Add metadata to version edit: {:?}", meta);
-            edit.add_file(meta, 0);
+            edit.add_file(meta);
         }
         Ok(())
     }

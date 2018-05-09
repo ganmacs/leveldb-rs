@@ -34,7 +34,7 @@ impl From<u8> for Tag {
 }
 
 pub struct VersionEdit {
-    files: Vec<(FileMetaData, usize)>,
+    pub files: Vec<FileMetaData>,
     pub next_file_number: u64,
     pub last_sequence: u64,
     pub log_number: u64,
@@ -52,7 +52,7 @@ impl VersionEdit {
         }
     }
 
-    pub fn files<'a>(&self) -> &Vec<(FileMetaData, usize)> {
+    pub fn files<'a>(&self) -> &Vec<FileMetaData> {
         &self.files
     }
 
@@ -70,22 +70,20 @@ impl VersionEdit {
                 Tag::Comparator => unimplemented!(),
                 Tag::DeletedFile => unimplemented!(),
                 Tag::NewFile => {
-                    let level = input.read_u64() as usize;
+                    let level = input.read_u64();
                     let file_num = input.read_u64();
                     let file_size = input.read_u64();
                     let largest_size = input.read_u64() as usize;
                     let largest = input.read(largest_size);
                     let smallest_size = input.read_u64() as usize;
                     let smallest = input.read(smallest_size);
-                    self.files.push((
-                        FileMetaData {
-                            file_num: file_num,
-                            file_size: file_size,
-                            largest: InternalKey::from(largest),
-                            smallest: InternalKey::from(smallest),
-                        },
-                        level,
-                    ));
+                    self.files.push(FileMetaData {
+                        file_num: file_num,
+                        file_size: file_size,
+                        largest: InternalKey::from(largest),
+                        smallest: InternalKey::from(smallest),
+                        level: level,
+                    });
                 }
             }
         }
@@ -114,9 +112,9 @@ impl VersionEdit {
             res.put_u64_le(self.last_sequence as u64);
         }
 
-        for &(ref meta, ref level) in self.files.iter() {
+        for meta in self.files.iter() {
             res.put_u8(Tag::NewFile as u8);
-            res.put_u64_le(*level as u64);
+            res.put_u64_le(meta.level);
             res.put_u64_le(meta.file_num);
             res.put_u64_le(meta.file_size);
             res.put_u64_le(meta.largest().len() as u64);
@@ -135,7 +133,7 @@ impl VersionEdit {
         writer.add_record(res.freeze());
     }
 
-    pub fn add_file(&mut self, meta: FileMetaData, level: usize) {
-        self.files.push((meta, level));
+    pub fn add_file(&mut self, meta: FileMetaData) {
+        self.files.push(meta);
     }
 }

@@ -6,6 +6,7 @@ pub struct FileMetaDataBuilder {
     file_size: Option<u64>,
     largest: Option<InternalKey>,
     smallest: Option<InternalKey>,
+    level: u64,
 }
 
 impl FileMetaDataBuilder {
@@ -15,6 +16,7 @@ impl FileMetaDataBuilder {
             file_size: None,
             largest: None,
             smallest: None,
+            level: 0,
         }
     }
 
@@ -35,6 +37,11 @@ impl FileMetaDataBuilder {
 
     pub fn smallest(&mut self, smallest: InternalKey) -> &Self {
         self.smallest = Some(smallest);
+        self
+    }
+
+    pub fn level(&mut self, v: u64) -> &Self {
+        self.level = v;
         self
     }
 
@@ -60,6 +67,7 @@ impl FileMetaDataBuilder {
             file_size: self.file_size.unwrap(),
             largest: self.largest.unwrap(),
             smallest: self.smallest.unwrap(),
+            level: self.level,
         })
     }
 }
@@ -70,6 +78,7 @@ pub struct FileMetaData {
     pub file_size: u64,
     pub largest: InternalKey,
     pub smallest: InternalKey,
+    pub level: u64,
 }
 
 impl FileMetaData {
