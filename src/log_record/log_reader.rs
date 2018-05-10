@@ -88,28 +88,48 @@ impl<T: Read> Iterator for LogReader<T> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use batch::WriteBatch;
-//     use std::fs;
-//     use std::io::BufReader;
-//     use super::LogReader;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::LogWriter;
+    use std::io::{BufReader, BufWriter, Cursor};
 
-//     #[test]
-//     fn read_full_record() {
-//         let reader = BufReader::new(fs::File::open("test/data/full_record.log").unwrap());
-//         let mut lr = LogReader::new(reader);
-//         let s = lr.read_record().unwrap();
-//         let batch = WriteBatch::load_data(s);
-//         assert_eq!(batch.count(), 1);
-//     }
+    #[test]
+    fn log_reader_full_record() {
+        let b = Bytes::from("key");
+        let mut value: Vec<u8> = vec![];
+        {
+            let w = BufWriter::new(Cursor::new(&mut value));
+            let mut lw = LogWriter::new(w);
+            lw.add_record(b.clone());
+        }
 
-//     #[test]
-//     fn read_across_record() {
-//         let reader = BufReader::new(fs::File::open("test/data/across_record.log").unwrap());
-//         let mut lr = LogReader::new(reader);
-//         let s = lr.read_record().unwrap();
-//         let batch = WriteBatch::load_data(s);
-//         assert_eq!(batch.count(), 1);
-//     }
-// }
+        let r = BufReader::new(Cursor::new(value));
+        let mut reader = LogReader::new(r);
+        assert_eq!(reader.read_record(), Some(b));
+        assert_eq!(reader.read_record(), None);
+    }
+
+    #[test]
+    fn log_reader_across() {
+        let bs: Vec<Bytes> = (1..1000)
+            .map(|v| Bytes::from(format!("key{:?}", v)))
+            .collect();
+        let mut value: Vec<u8> = vec![];
+        {
+            let w = BufWriter::new(Cursor::new(&mut value));
+            let mut lw = LogWriter::new(w);
+
+            for b in &bs {
+                lw.add_record(b.clone());
+            }
+        }
+
+        let r = BufReader::new(Cursor::new(value));
+        let mut reader = LogReader::new(r);
+
+        for b in &bs {
+            assert_eq!(reader.read_record(), Some(b.clone()));
+        }
+    }
+}
