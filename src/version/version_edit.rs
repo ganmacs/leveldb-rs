@@ -43,11 +43,11 @@ pub struct VersionEdit {
 }
 
 impl VersionEdit {
-    pub fn new(nex_file_num: u64) -> Self {
+    pub fn new(next_file_number: u64) -> Self {
         VersionEdit {
             files: vec![],
             deleted_files: vec![],
-            next_file_number: nex_file_num,
+            next_file_number: next_file_number,
             log_number: 0,
             last_sequence: 0,
             prev_log_number: 0,
