@@ -211,10 +211,9 @@ mod tests {
             bb.add(&v.0, &v.1);
         }
 
-        let block = Block::new(bb.build()).iter();
-        for (b, d) in block.zip(&dic) {
-            assert_eq!(b.0, d.0);
-            assert_eq!(b.1, d.1);
+        let mut block = Block::new(bb.build()).iter();
+        for expect in dic.iter() {
+            assert_eq!(expect, &block.next().unwrap());
         }
     }
 

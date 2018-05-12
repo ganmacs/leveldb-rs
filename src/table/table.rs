@@ -146,11 +146,11 @@ mod tests {
     #[test]
     fn test_table_iter() {
         let (value, dic) = built_table_value();
-        let titer = Table::open(value.len(), TestRandomAccessFile::open("dummy")).iter();
+        let mut titer = Table::open(value.len(), TestRandomAccessFile::open("dummy")).iter();
 
-        for (t, d) in titer.zip(&dic) {
-            assert_eq!(t.0, d.0);
-            assert_eq!(t.1, d.1);
+        for exp in dic {
+            let t = titer.next().unwrap();
+            assert_eq!(exp, t);
         }
     }
 }

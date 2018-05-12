@@ -191,8 +191,9 @@ mod tests {
             }
         }
 
-        for (a, b) in sl.iter().zip(keys) {
-            assert_eq!(a, b);
+        let mut iter = sl.iter();
+        for k in keys {
+            assert_eq!(k, iter.next().unwrap());
         }
     }
 }
