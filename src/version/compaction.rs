@@ -54,7 +54,6 @@ where
 pub struct MergeingIterator<I: Iterator> {
     iters: Vec<I>,
     nexts: Vec<Option<I::Item>>,
-    value: Option<I::Item>,
     idx: usize,
     first: bool,
 }
@@ -71,7 +70,6 @@ where
         Self {
             iters: iters,
             nexts: vec![None; l],
-            value: None,
             idx: 0,
             first: true,
         }
