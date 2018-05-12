@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::Read;
 use std::io::BufReader;
@@ -264,14 +264,14 @@ impl Version {
 
 pub struct VersionBuilder {
     added: Vec<Vec<FileMetaData>>,
-    deleted: Vec<HashMap<u64, bool>>,
+    deleted: Vec<BTreeSet<u64>>,
 }
 
 impl VersionBuilder {
     pub fn new() -> Self {
         Self {
             added: vec![Vec::new(); LEVEL],
-            deleted: vec![HashMap::new(); LEVEL],
+            deleted: vec![BTreeSet::new(); LEVEL],
         }
     }
 
@@ -279,6 +279,9 @@ impl VersionBuilder {
         for meta in edit.files() {
             self.added[meta.level as usize].push(meta.clone());
         }
+
+        for df in edit.deleted_files() {
+            self.deleted[df.level as usize].insert(df.file_num);
         }
     }
 
@@ -291,7 +294,7 @@ impl VersionBuilder {
 
             let ref level_files = base.files[i];
             for f in level_files {
-                if *(d.get(&f.file_num).unwrap_or(&false)) {
+                if d.contains(&f.file_num) {
                     continue;
                 }
                 version.files[i].push(f.clone())
@@ -299,7 +302,7 @@ impl VersionBuilder {
 
             let ref level_files = self.added[i];
             for f in level_files {
-                if *(d.get(&f.file_num).unwrap_or(&false)) {
+                if d.contains(&f.file_num) {
                     continue;
                 }
 
@@ -310,5 +313,42 @@ impl VersionBuilder {
         }
 
         version
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use version::FileMetaData;
+    use ikey::InternalKey;
+
+    fn file_meta_data(i: u64) -> FileMetaData {
+        FileMetaData {
+            file_num: i,
+            file_size: 0,
+            smallest: InternalKey::new("dummy".as_bytes(), 13),
+            largest: InternalKey::new("dummy".as_bytes(), 15),
+            level: 0,
+        }
+    }
+
+    #[test]
+    fn version_builder_level_0() {
+        let f1 = file_meta_data(1);
+        let f2 = file_meta_data(2);
+        let f3 = file_meta_data(3);
+
+        let mut version_edit = VersionEdit::new(0);
+        version_edit.files.push(f1.clone());
+        version_edit.files.push(f2.clone());
+        version_edit.deleted_files.push(f2.clone());
+
+        let mut vb = VersionBuilder::new();
+        vb.apply(&version_edit);
+        let mut v = Version::new();
+        v.files[0].push(f3.clone());
+
+        let v = vb.save_to(&v);
+        assert_eq!(v.files[0], [f1, f3]);
     }
 }
