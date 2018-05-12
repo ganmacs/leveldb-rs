@@ -34,7 +34,7 @@ impl MemDB {
             let key_size = v.read_u32();
             let ikey = v.read(key_size as usize - U64_BYTE_SIZE);
             let seq_kind = v.read_u64();
-            let kind = KeyKind::from((seq_kind & 1) as u8);
+            let kind = KeyKind::from((seq_kind & 0xff) as u8);
 
             match (kind, key.user_key() == ikey) {
                 (KeyKind::Value, true) => Some(get_length_prefixed_key(&v)),

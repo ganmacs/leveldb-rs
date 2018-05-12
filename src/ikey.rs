@@ -109,14 +109,14 @@ impl InternalKey {
     }
 
     pub fn seq_number(&self) -> usize {
-        (self.compacted_seq_kind() >> 1) as usize
+        (self.compacted_seq_kind() >> 8) as usize
     }
 
     pub fn kind(&self) -> KeyKind {
-        match self.compacted_seq_kind() & 8 {
+        match self.compacted_seq_kind() & 0xff {
             0 => KeyKind::Value,
             1 => KeyKind::Delete,
-            _ => unreachable!(),
+            i => unreachable!(),
         }
     }
 
@@ -135,7 +135,7 @@ impl InternalKey {
         let mut bytes = BytesMut::with_capacity(UKEY_LENGTH + key_size + SEQ_LENGTH);
         bytes.write_u32(key_size as u32);
         bytes.write_slice(user_key);
-        bytes.write_u64(seq << 1 | kind as u64);
+        bytes.write_u64(seq << 8 | kind as u64);
         bytes.freeze()
     }
 }
@@ -150,8 +150,9 @@ mod tests {
         assert_eq!(ikey.user_key(), "hoge");
         assert_eq!(
             ikey.memtable_key(),
-            Bytes::from("\x0c\0\0\0hoge\x04\0\0\0\0\0\0\0")
+            Bytes::from("\x0c\0\0\0hoge\0\x02\0\0\0\0\0\0")
         );
         assert_eq!(ikey.seq_number(), 2);
+        assert_eq!(ikey.kind(), KeyKind::Value);
     }
 }
