@@ -1,9 +1,11 @@
+use std::cmp;
+
 use super::FileMetaData;
 
 const LEVEL: usize = 12;
 
 pub struct Compaction {
-    level: usize,
+    pub level: usize,
     pub inputs: Vec<Vec<FileMetaData>>,
 }
 
@@ -58,8 +60,6 @@ pub struct MergeingIterator<I: Iterator> {
     first: bool,
 }
 
-use std::cmp;
-
 impl<I> MergeingIterator<I>
 where
     I: Iterator,
@@ -84,6 +84,10 @@ where
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.iters.len() == 0 {
+            return None;
+        }
+
         if self.first {
             for (i, it) in self.iters.iter_mut().enumerate() {
                 self.nexts[i] = it.next()
@@ -104,7 +108,7 @@ where
                 continue;
             }
 
-            if &self.nexts[self.idx] > n {
+            if self.nexts[self.idx].is_none() || &self.nexts[self.idx] > n {
                 self.idx = i;
             }
         }
@@ -119,14 +123,14 @@ mod tests {
 
     #[test]
     fn test_two_level_iterator() {
-        let expecteds = (1..10).into_iter();
-        let v = vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]]
+        let expecteds = vec![4, 5, 1, 2, 3, 7, 8, 9].into_iter();
+        let v = vec![vec![4, 5], vec![1, 2, 3], vec![7, 8, 9], vec![]]
             .into_iter()
             .map(|v| v.into_iter());
-        let actuals = TwoLevelIterator::new(v.into_iter());
+        let mut actuals = TwoLevelIterator::new(v.into_iter());
 
-        for (e, a) in expecteds.zip(actuals) {
-            assert_eq!(e, a);
+        for e in expecteds {
+            assert_eq!(Some(e), actuals.next());
         }
     }
 
@@ -137,13 +141,30 @@ mod tests {
             vec![1, 5, 10, 20, 30, 40],
             vec![2, 4, 6, 8],
             vec![7, 55, 100],
+            vec![],
         ].into_iter()
             .map(|v| v.into_iter())
             .collect();
-        let actuals = MergeingIterator::new(v);
+        let mut actuals = MergeingIterator::new(v);
 
-        for (e, a) in expecteds.zip(actuals) {
-            assert_eq!(e, a);
+        for e in expecteds {
+            assert_eq!(Some(e), actuals.next());
         }
+    }
+
+    #[test]
+    fn empty_mergeing_iterator() {
+        let v: Vec<Vec<u8>> = vec![vec![]];
+        let v = v.into_iter().map(|v| v.into_iter()).collect();
+        let mut actuals = MergeingIterator::new(v);
+        assert_eq!(actuals.next(), None)
+    }
+
+    #[test]
+    fn empty_outer_mergeing_iterator() {
+        let v: Vec<Vec<u8>> = vec![];
+        let v = v.into_iter().map(|v| v.into_iter()).collect();
+        let mut actuals = MergeingIterator::new(v);
+        assert_eq!(actuals.next(), None)
     }
 }
