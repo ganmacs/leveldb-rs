@@ -1,8 +1,8 @@
+use bytes::Bytes;
+use comparator::Comparator;
 use rand;
 use rand::Rng;
-use bytes::Bytes;
 use std::cmp::Ordering;
-use comparator::Comparator;
 
 const DATA_SIZE: usize = 8192;
 const MAX_HEIGHT: usize = 7;

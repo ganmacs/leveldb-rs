@@ -3,10 +3,10 @@ extern crate rand;
 
 mod skiplist;
 
-use std::iter::Iterator;
+use comparator::{Comparator, InternalKeyComparator};
 use ikey::{InternalKey, KeyKind};
 use slice::{ByteRead, ByteWrite, Bytes, U32_BYTE_SIZE, U64_BYTE_SIZE};
-use comparator::{Comparator, InternalKeyComparator};
+use std::iter::Iterator;
 
 pub struct MemDB {
     inner: skiplist::SkipList<KeyComparator>,
@@ -116,7 +116,7 @@ mod tests {
             let key_bytes = v.0.as_bytes();
             let k = InternalKey::new(key_bytes, 1);
             db.add(&k, &v.1);
-            assert_eq!(db.get(&InternalKey::new(key_bytes, 0)).unwrap(), v.1);
+            assert_eq!(db.get(&InternalKey::new(key_bytes, 10)).unwrap(), v.1);
         }
 
         assert_eq!(db.get(&InternalKey::new(b"notfound", 0)), None);
@@ -129,9 +129,9 @@ mod tests {
         let value = Bytes::from("value1");
 
         db.add(&InternalKey::new(key, 10), &value);
-        assert_eq!(db.get(&InternalKey::new(key, 9)), Some(value.clone()));
-        assert_eq!(db.get(&InternalKey::new(key, 10)), Some(value));
-        assert_eq!(db.get(&InternalKey::new(key, 11)), None);
+        assert_eq!(db.get(&InternalKey::new(key, 9)), None);
+        assert_eq!(db.get(&InternalKey::new(key, 10)), Some(value.clone()));
+        assert_eq!(db.get(&InternalKey::new(key, 11)), Some(value.clone()));
     }
 
     #[test]
@@ -184,8 +184,8 @@ mod tests {
         let mut db = MemDB::new();
         let hash: Vec<(InternalKey, Bytes)> = vec![
             (InternalKey::new("key01".as_bytes(), 1), Bytes::from("v")),
-            (InternalKey::new("key00".as_bytes(), 2), Bytes::from("v")),
             (InternalKey::new("key00".as_bytes(), 1), Bytes::from("v")),
+            (InternalKey::new("key00".as_bytes(), 2), Bytes::from("v")),
         ];
 
         for v in &hash.clone() {
