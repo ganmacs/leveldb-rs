@@ -1,7 +1,7 @@
-use std::io::Read;
+use super::{RecordType, crc32, BLOCK_SIZE, CHECKSUM_SIZE, HEADER_SIZE, LENGTH_SIZE, TYPE_SIZE};
 use byteorder::{ByteOrder, LittleEndian};
 use bytes::{Bytes, BytesMut};
-use super::{RecordType, crc32, BLOCK_SIZE, CHECKSUM_SIZE, HEADER_SIZE, LENGTH_SIZE, TYPE_SIZE};
+use std::io::Read;
 use std::iter::Iterator;
 
 pub struct LogReader<T: Read> {
@@ -90,8 +90,8 @@ impl<T: Read> Iterator for LogReader<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::LogWriter;
+    use super::*;
     use std::io::{BufReader, BufWriter, Cursor};
 
     #[test]

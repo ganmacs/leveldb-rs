@@ -1,7 +1,7 @@
-use std::io;
-use slice::{ByteRead, Bytes, U32_BYTE_SIZE};
 use super::format;
 use random_access_file::RandomAccessFile;
+use slice::{ByteRead, Bytes, U32_BYTE_SIZE};
+use std::io;
 
 #[derive(Debug)]
 pub struct Block {
@@ -187,8 +187,8 @@ fn decode_block(slice: &Bytes, offset: usize) -> (usize, usize, usize, usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::block_builder::BlockBuilder;
+    use super::*;
 
     fn create_seed_helper(size: usize) -> Vec<(Bytes, Bytes)> {
         (0..size)

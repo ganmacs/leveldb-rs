@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use bytes::Bytes;
+use std::collections::HashMap;
 
-use filename;
 use super::table::{Table, TableIterator};
+use filename;
 use random_access_file::RandomAccessFile;
 
 pub struct TableCache<T> {

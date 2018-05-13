@@ -1,5 +1,5 @@
-use std::cmp;
 use slice::{ByteWrite, Bytes, BytesMut};
+use std::cmp;
 
 // An entry for a particular key-value pair has the form:
 //     shared_bytes: varint32

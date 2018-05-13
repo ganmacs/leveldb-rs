@@ -1,10 +1,10 @@
-use std::io::Write;
 use bytes::BufMut;
+use std::io::Write;
 
-use log_record::LogWriter;
 use super::{FileMetaData, BLOCK_SIZE};
-use slice::{ByteRead, Bytes, BytesMut};
 use ikey::InternalKey;
+use log_record::LogWriter;
+use slice::{ByteRead, Bytes, BytesMut};
 
 enum Tag {
     Comparator = 1,

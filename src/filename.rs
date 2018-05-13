@@ -1,7 +1,7 @@
 use regex;
+use std::cmp;
 use std::fs;
 use std::io::Write;
-use std::cmp;
 
 pub enum FileType<'a> {
     Log(&'a str, u64),
@@ -11,26 +11,16 @@ pub enum FileType<'a> {
     TempFileName(&'a str, usize),
 }
 
-lazy_static!{
-    static ref CURRENT_FILE_REGEX: regex::Regex = {
-        regex::Regex::new(r"([\w]+)/CURRENT").unwrap()
-    };
-
-    static ref LOG_FILE_REGEX: regex::Regex = {
-        regex::Regex::new(r"([\w]+)/([\d]{7})\.log").unwrap()
-    };
-
-    static ref TABLE_FILE_REGEX: regex::Regex = {
-        regex::Regex::new(r"([\w]+)/([\d]{7})\.ldb").unwrap()
-    };
-
-    static ref MANIFEST_FILE_REGEX: regex::Regex = {
-        regex::Regex::new(r"([\w]+)/MANIFEST-([\d]{7})").unwrap()
-    };
-
-    static ref CURRENT_TMP_REGEX: regex::Regex = {
-        regex::Regex::new(r"([\w]+)/CURRENT.([\d]{7})").unwrap()
-    };
+lazy_static! {
+    static ref CURRENT_FILE_REGEX: regex::Regex = { regex::Regex::new(r"([\w]+)/CURRENT").unwrap() };
+    static ref LOG_FILE_REGEX: regex::Regex =
+        { regex::Regex::new(r"([\w]+)/([\d]{7})\.log").unwrap() };
+    static ref TABLE_FILE_REGEX: regex::Regex =
+        { regex::Regex::new(r"([\w]+)/([\d]{7})\.ldb").unwrap() };
+    static ref MANIFEST_FILE_REGEX: regex::Regex =
+        { regex::Regex::new(r"([\w]+)/MANIFEST-([\d]{7})").unwrap() };
+    static ref CURRENT_TMP_REGEX: regex::Regex =
+        { regex::Regex::new(r"([\w]+)/CURRENT.([\d]{7})").unwrap() };
 }
 
 #[derive(Eq, Ord, Debug)]

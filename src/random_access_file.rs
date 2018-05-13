@@ -1,5 +1,5 @@
-use std::fs;
 use memmap::{Mmap, MmapOptions};
+use std::fs;
 
 pub trait RandomAccessFile {
     fn open(fname: &str) -> Self;

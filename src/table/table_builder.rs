@@ -1,10 +1,10 @@
+use crc::{Hasher32, crc32};
+use slice;
+use slice::{ByteWrite, Bytes, BytesMut};
 use std::fs;
 use std::io;
 use std::io::BufWriter;
-use crc::{Hasher32, crc32};
 use table::{Compression, block_builder::BlockBuilder, format::{BlockHandle, Footer}};
-use slice::{ByteWrite, Bytes, BytesMut};
-use slice;
 
 pub struct TableBuilder<T: io::Write> {
     writer: TableWriter<T>,

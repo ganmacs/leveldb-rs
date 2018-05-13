@@ -1,7 +1,7 @@
-use std::{cmp, u8};
-use bytes::BufMut;
 use byteorder::{ByteOrder, LittleEndian};
+use bytes::BufMut;
 pub use bytes::{Bytes, BytesMut};
+use std::{cmp, u8};
 
 use std::mem;
 

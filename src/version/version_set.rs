@@ -1,10 +1,10 @@
-use std::collections::BTreeSet;
-use std::fs;
-use std::io::Read;
-use std::io::BufReader;
-use std::io::BufWriter;
 use bytes::Bytes;
 use random_access_file::RandomAccessFile;
+use std::collections::BTreeSet;
+use std::fs;
+use std::io::BufReader;
+use std::io::BufWriter;
+use std::io::Read;
 
 use log_record::{LogReader, LogWriter};
 use filename;

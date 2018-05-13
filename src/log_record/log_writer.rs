@@ -1,6 +1,6 @@
-use std::io::Write;
-use bytes::{BufMut, Bytes, BytesMut};
 use super::{RecordType, crc32, BLOCK_SIZE, HEADER_SIZE};
+use bytes::{BufMut, Bytes, BytesMut};
+use std::io::Write;
 
 pub struct LogWriter<T: Write> {
     inner: T,
@@ -73,8 +73,8 @@ impl<T: Write> LogWriter<T> {
 #[cfg(test)]
 mod tests {
     use super::{LogWriter, RecordType, BLOCK_SIZE};
-    use bytes::Bytes;
     use byteorder::{ByteOrder, LittleEndian};
+    use bytes::Bytes;
 
     fn crc_bytes(offset: &mut usize) {
         *offset += 4

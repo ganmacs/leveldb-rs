@@ -1,8 +1,8 @@
-use std::io;
-use slice::{ByteRead, ByteWrite, Bytes, BytesMut};
-use super::{Compression, block::Block};
 use super::table_builder::TRAILER_SIZE;
+use super::{Compression, block::Block};
 use random_access_file::RandomAccessFile;
+use slice::{ByteRead, ByteWrite, Bytes, BytesMut};
+use std::io;
 
 // TABLE_MAGIC_NUMBER was picked by running
 //    echo http://code.google.com/p/leveldb/ | sha1sum

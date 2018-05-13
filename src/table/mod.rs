@@ -1,15 +1,15 @@
-mod table_builder;
 mod block;
 mod block_builder;
 mod format;
-mod table_cache;
 mod table;
+pub mod table_builder;
+mod table_cache;
 
-use version::{FileMetaData, FileMetaDataBuilder};
-use memdb::MemDBIterator;
 use filename;
 use ikey;
+use memdb::MemDBIterator;
 use slice::Bytes;
+use version::{FileMetaData, FileMetaDataBuilder};
 
 enum Compression {
     No,

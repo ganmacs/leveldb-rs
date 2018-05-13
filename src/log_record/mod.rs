@@ -1,9 +1,9 @@
-mod log_writer;
 mod log_reader;
+mod log_writer;
 
-use crc::{Hasher32, crc32};
 pub use self::log_reader::LogReader;
 pub use self::log_writer::LogWriter;
+use crc::{Hasher32, crc32};
 
 // block := record* trailer?
 // record :=

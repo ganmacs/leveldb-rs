@@ -1,8 +1,8 @@
 use byteorder::{ByteOrder, LittleEndian};
 use bytes::{BufMut, Bytes, BytesMut};
 // use memdb::MemDB;
-use std::iter::{IntoIterator, Iterator};
 use ikey::KeyKind;
+use std::iter::{IntoIterator, Iterator};
 
 const COUNT_INDEX: usize = 8;
 const RECORD_INDEX: usize = 12;

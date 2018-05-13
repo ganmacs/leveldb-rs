@@ -12,18 +12,18 @@ extern crate env_logger;
 #[macro_use]
 extern crate log;
 
-mod log_record;
 mod batch;
-mod memdb;
-mod ikey;
-mod filename;
-mod version;
 mod comparator;
-mod table;
-mod leveldb;
-mod slice;
 mod configure;
+mod filename;
+mod ikey;
+mod leveldb;
+mod log_record;
+mod memdb;
 mod random_access_file;
+mod slice;
+mod table;
+mod version;
 
 pub use batch::WriteBatch;
 pub use leveldb::open;

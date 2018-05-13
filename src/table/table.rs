@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use super::block::{Block, BlockIterator};
 use super::format::{Footer, FOOTER_MAX_LENGTH};
 use super::{block, format};
-use super::block::{Block, BlockIterator};
-use slice::Bytes;
 use random_access_file::RandomAccessFile;
+use slice::Bytes;
 
 pub struct Table<T> {
     index_block: Block,
@@ -83,11 +83,11 @@ impl<T: RandomAccessFile> Iterator for TableIterator<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::table_builder::TableBuilder;
+    use super::*;
+    use bytes::Bytes;
     use random_access_file::RandomAccessFile;
     use std::io::{BufWriter, Cursor};
-    use bytes::Bytes;
 
     fn built_table_value() -> (Vec<u8>, Vec<(Bytes, Bytes)>) {
         let mut value: Vec<u8> = vec![];

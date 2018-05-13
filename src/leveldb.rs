@@ -1,17 +1,17 @@
-use std::{fs, mem, path, str};
-use std::io::{BufReader, BufWriter};
 use bytes::Bytes;
 use env_logger;
+use std::io::{BufReader, BufWriter};
+use std::{fs, mem, path, str};
 
-use filename;
-use ikey::InternalKey;
-use memdb::{MemDB, MemDBIterator};
 use batch::WriteBatch;
-use log_record::{LogReader, LogWriter};
 use version::{VersionEdit, VersionSet};
 use configure;
-use table;
+use filename;
+use ikey::{InternalKey, KeyKind, SEQ_MAX_NUMBER};
+use log_record::{LogReader, LogWriter};
+use memdb::{MemDB, MemDBIterator};
 use random_access_file::MmapRandomAccessFile;
+use table;
 
 pub fn open(dir: &str) -> LevelDB {
     env_logger::init();
