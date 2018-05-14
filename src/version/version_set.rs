@@ -206,6 +206,31 @@ impl VersionSet {
     pub fn set_last_sequence(&mut self, v: u64) {
         self.last_sequence = v;
     }
+
+// TODO: use comparetor
+fn max_key_range2<'a>(
+    files1: &'a Vec<FileMetaData>,
+    files2: &'a Vec<FileMetaData>,
+) -> (ikey::InternalKey, ikey::InternalKey) {
+    let (s1, l1) = max_key_range(files1);
+    let (s2, l2) = max_key_range(files2);
+    (if s1 < s2 { s1 } else { s2 }, if l1 < l2 { l2 } else { l1 })
+}
+
+fn max_key_range<'a>(files: &'a Vec<FileMetaData>) -> (ikey::InternalKey, ikey::InternalKey) {
+    let mut smallest = &files[0].smallest;
+    let mut largest = &files[0].largest;
+    for f in files {
+        if smallest > &f.smallest {
+            smallest = &f.smallest;
+        }
+
+        if largest < &f.largest {
+            largest = &f.largest;
+        }
+    }
+
+    (smallest.clone(), largest.clone())
 }
 
 const LEVEL: usize = 12;
