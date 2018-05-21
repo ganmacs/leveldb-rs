@@ -285,6 +285,63 @@ impl Version {
 
         None
     }
+
+    pub fn get_overlapping_inputs(
+        &self,
+        level: usize,
+        left: &ikey::InternalKey,
+        right: &ikey::InternalKey,
+    ) -> Vec<FileMetaData> {
+        let mut ret = vec![];
+
+        if level >= LEVEL {
+            return ret;
+        }
+
+        let mut left_key = left.user_key();
+        let mut right_key = right.user_key();
+
+        // TODO:
+        if level == 0 {
+            loop {
+                let mut retry = false;
+
+                for f in &self.files[level] {
+                    let smallest_key = f.smallest.user_key();
+                    let largest_key = f.largest.user_key();
+
+                    if smallest_key < left_key && right_key < largest_key {
+                        left_key = smallest_key;
+                        right_key = largest_key;
+                        retry = true;
+                    } else if smallest_key < left_key {
+                        left_key = smallest_key;
+                        retry = true;
+                    } else if right_key < largest_key {
+                        right_key = largest_key;
+                        retry = true;
+                    }
+                }
+
+                if !retry {
+                    break;
+                }
+            }
+        }
+
+        for f in &self.files[level] {
+            let smallest_key = f.smallest.user_key();
+            let largest_key = f.largest.user_key();
+
+            if largest_key < left_key || right_key < smallest_key {
+                continue;
+            } else {
+                ret.push(f.clone());
+            }
+        }
+
+        ret
+    }
 }
 
 pub struct VersionBuilder {
